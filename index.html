@@ -197,26 +197,28 @@ const SUPABASE_URL = "https://cjbwqutwvymejgsdnjzf.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqYndxdXR3dnltZWpnc2RuanpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3OTgyMjIsImV4cCI6MjA5NjM3NDIyMn0.C20QTlycDBvgfMjwAGaPQ1VLhlPj0iGA3C3xYi463bs";
 const ADMIN_PASSWORD = "zjhkanekaesanai";
 
-let supabase;
+let supabase = null;
 
-// ライブラリの読み込み確認を最初に行う（ここで落ちるのを防ぐ）
+// 二重宣言を排除し、安全に初期化
 if (window.supabase && window.supabase.createClient) {
     supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 } else {
-    document.getElementById("totalDisplay").innerText = "Supabaseの読み込みに失敗しました。ネット環境を確認してください。";
+    document.getElementById("totalDisplay").innerText = "Supabaseの読み込みに失敗しました。";
 }
 
-// パネルの表示・非表示切り替え
+// パネルの表示・非表示切り替え（CSSの display: none を正しく認識するよう修正）
 function toggleSettings(){
     const panel = document.getElementById("settingsPanel");
     if(!panel) return;
-    panel.style.display = (panel.style.display === "block") ? "none" : "block";
+    const currentDisplay = window.getComputedStyle(panel).display;
+    panel.style.display = (currentDisplay === "block") ? "none" : "block";
 }
 
 function toggleHistory(){
     const panel = document.getElementById("historyPanel");
     if(!panel) return;
-    panel.style.display = (panel.style.display === "block") ? "none" : "block";
+    const currentDisplay = window.getComputedStyle(panel).display;
+    panel.style.display = (currentDisplay === "block") ? "none" : "block";
     if(panel.style.display === "block") {
         loadHistory();
     }
@@ -225,7 +227,8 @@ function toggleHistory(){
 function toggleAdmin(){
     const panel = document.getElementById("adminPanel");
     if(!panel) return;
-    panel.style.display = (panel.style.display === "block") ? "none" : "block";
+    const currentDisplay = window.getComputedStyle(panel).display;
+    panel.style.display = (currentDisplay === "block") ? "none" : "block";
 }
 
 function loginAdmin(){
@@ -246,7 +249,7 @@ async function loadTotal(){
             .from("debt")
             .select("total")
             .eq("id", 1)
-            .maybeSingle(); // single() から maybeSingle() に変更（レコード未作成時のフリーズ対策）
+            .maybeSingle(); 
 
         if(error){
             console.error("Total読み込みエラー:", error);
