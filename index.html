@@ -142,7 +142,7 @@ input, select{
     display: block;
 }
 
-/* 日付入力欄特有のはみ出しを完全に殺すためのリセット */
+/* 日付入力欄特有のはみ出しを完全にリセット */
 input[type="date"] {
     appearance: none;
     -webkit-appearance: none;
@@ -336,10 +336,10 @@ tr:last-child {
     td:nth-of-type(4):before { content: "状態"; }
     td:nth-of-type(5):before { content: "操作"; }
     
-    /* スマホ時の操作ボタンのズレ・違和感を解消するリセット */
+    /* スマホ時の操作ボタンレイアウト */
     td .action-buttons-wrap {
         display: flex;
-        flex-direction: column; /* ズレを防ぐため、スマホでは2つのボタンを綺麗に縦並びにする */
+        flex-direction: column; 
         width: 100%;
         gap: 8px;
         margin-top: 4px;
@@ -347,7 +347,7 @@ tr:last-child {
     td button {
         width: 100%; 
         margin: 0;
-        padding: 10px; /* スマホで押しやすい丁度いいサイズ */
+        padding: 10px; 
         font-size: 14px;
         justify-content: center;
     }
@@ -437,14 +437,22 @@ tr:last-child {
 <div id="toast" class="toast-container"></div>
 
 <script>
-// 再読み込み(リロード)時に必ずページの一番上（スクロール位置0）を表示する処理
-window.addEventListener('beforeunload', () => {
+// 再読み込み(リロード)時の初期化処理
+function resetPageOnLoad() {
+    // 1. スクロール位置を一番上（0）に戻す
     window.scrollTo(0, 0);
-});
+
+    // 2. パネルが開いていた場合は強制的に非表示（閉じる）にする
+    const historyPanel = document.getElementById("historyPanel");
+    const adminPanel = document.getElementById("adminPanel");
+    if (historyPanel) historyPanel.style.display = "none";
+    if (adminPanel) adminPanel.style.display = "none";
+}
+
+// ページを離れる前、および読み込み完了時に初期化を実行
+window.addEventListener('beforeunload', resetPageOnLoad);
 window.addEventListener('load', () => {
-    setTimeout(() => {
-        window.scrollTo(0, 0);
-    }, 0);
+    setTimeout(resetPageOnLoad, 0);
 });
 
 // --- configuration ---
