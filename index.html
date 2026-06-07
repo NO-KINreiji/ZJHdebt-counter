@@ -23,7 +23,7 @@
 *{
     margin:0;
     padding:0;
-    box-sizing:border-box;
+    box-sizing:border-box; /* すべての要素の幅計算を安全に統一 */
 }
 
 body{
@@ -32,6 +32,7 @@ body{
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     min-height: 100vh;
     padding: 20px;
+    overflow-x: hidden; /* 横スクロール（はみ出し）を強制的に防ぐ */
 }
 
 .container{
@@ -123,7 +124,7 @@ button.btn-danger:hover {
     display: flex;
     gap: 12px;
     justify-content: center;
-    margin-bottom: 20px;
+    margin-bottom: 30px;
     flex-wrap: wrap; 
 }
 
@@ -142,7 +143,6 @@ input, select{
     display: block;
 }
 
-/* 日付入力欄特有のはみ出しを完全にリセット */
 input[type="date"] {
     appearance: none;
     -webkit-appearance: none;
@@ -151,6 +151,23 @@ input[type="date"] {
 input:focus {
     outline: none;
     border-color: var(--accent-color);
+}
+
+/* パネル（一覧・管理者）の共通設定 */
+.panel{
+    background: var(--panel-bg);
+    border-radius: 20px;
+    padding: 30px;
+    /* 同時に開いたときのために上下に十分な余白を確保 */
+    margin-top: 20px;
+    margin-bottom: 40px; 
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 #adminControls{
@@ -285,9 +302,14 @@ tr:last-child {
 
 /* スマートフォン向けの完全レスポンシブ調整 */
 @media(max-width: 650px) {
-    body { padding: 12px; }
+    body { padding: 16px 12px; }
     .container { margin: 10px auto; }
-    .panel { padding: 20px; }
+    
+    .panel { 
+        padding: 24px 16px; 
+        margin-top: 15px; 
+        margin-bottom: 30px; /* スマホでも重ならないよう確保 */
+    }
     
     table, thead, tbody, th, td, tr { 
         display: block; 
@@ -300,7 +322,7 @@ tr:last-child {
     tr { 
         border: 1px solid #38414f; 
         border-radius: 12px; 
-        margin-bottom: 15px; 
+        margin-bottom: 16px; 
         padding: 12px;
         background: #1a1e24;
     }
@@ -341,13 +363,13 @@ tr:last-child {
         display: flex;
         flex-direction: column; 
         width: 100%;
-        gap: 8px;
-        margin-top: 4px;
+        gap: 10px;
+        margin-top: 6px;
     }
     td button {
         width: 100%; 
         margin: 0;
-        padding: 10px; 
+        padding: 12px; 
         font-size: 14px;
         justify-content: center;
     }
@@ -387,7 +409,7 @@ tr:last-child {
         <button class="btn-secondary" onclick="toggleAdmin()">管理者モード</button>
     </div>
 
-    <div id="historyPanel" class="panel">
+    <div id="historyPanel" class="panel" style="display: none;">
         <h2>内訳一覧</h2>
         <div class="history-container">
             <table>
@@ -405,7 +427,7 @@ tr:last-child {
         </div>
     </div>
 
-    <div id="adminPanel" class="panel">
+    <div id="adminPanel" class="panel" style="display: none;">
         <h2>管理者ログイン</h2>
         <input type="password" id="adminPassword" placeholder="パスワードを入力してください">
         <button onclick="loginAdmin()">ログイン</button>
@@ -439,10 +461,7 @@ tr:last-child {
 <script>
 // 再読み込み(リロード)時の初期化処理
 function resetPageOnLoad() {
-    // 1. スクロール位置を一番上（0）に戻す
     window.scrollTo(0, 0);
-
-    // 2. パネルが開いていた場合は強制的に非表示（閉じる）にする
     const historyPanel = document.getElementById("historyPanel");
     const adminPanel = document.getElementById("adminPanel");
     if (historyPanel) historyPanel.style.display = "none";
