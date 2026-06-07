@@ -207,25 +207,6 @@ tr:last-child {
     font-weight: 600;
 }
 
-/* ギアボタン */
-.gear{
-    position: fixed;
-    right: 25px;
-    bottom: 25px;
-    font-size: 24px;
-    width: 56px;
-    height: 56px;
-    background: var(--panel-bg);
-    color: var(--text-color);
-    border-radius: 50%;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-    z-index: 1000;
-    border: 1px solid #38414f;
-}
-.gear:hover {
-    background: #38414f;
-}
-
 /* モバイル向けカードUI変換 (スマホ表示) */
 @media(max-width: 650px) {
     body { padding: 12px; }
@@ -274,6 +255,7 @@ tr:last-child {
     
     td button {
         width: 100%;
+        margin-bottom: 5px;
     }
 }
 </style>
@@ -338,7 +320,7 @@ const CONFIG_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI
 const ADMIN_PASSWORD = "zjhkanekaesanai";
 
 let supabaseClient = null;
-let isAdminLoggedIn = false; // 管理者ログイン状態を追跡
+let isAdminLoggedIn = false; 
 
 try {
     if (window.supabase && window.supabase.createClient) {
@@ -374,7 +356,7 @@ function loginAdmin(){
         isAdminLoggedIn = true;
         document.getElementById("adminControls").style.display = "block";
         alert("管理者としてログインしました");
-        loadHistory(); // 削除ボタンを表示させるために履歴をリロード
+        loadHistory(); // ボタン類を再描画するために履歴をリロード
     }else{
         alert("パスワードが違います");
     }
@@ -423,10 +405,17 @@ async function loadHistory(){
 
         let html = "";
         for(const row of data){
-            // 管理者ログイン時のみ「削除」ボタンを表示
-            const deleteButton = isAdminLoggedIn 
-                ? `<button class="btn-danger" style="padding:6px 12px; font-size:13px; margin-left:5px;" onclick="deleteDebt('${row.id}', ${row.amount}, ${row.is_paid})">削除</button>` 
-                : '';
+            let actionTdContent = "-";
+
+            // 管理者ログイン時のみ操作可能にする
+            if (isAdminLoggedIn) {
+                const payButton = !row.is_paid 
+                    ? `<button style="padding:6px 12px; font-size:13px;" onclick="markPaid('${row.id}', ${row.amount})">返済済みにする</button>` 
+                    : '';
+                const deleteButton = `<button class="btn-danger" style="padding:6px 12px; font-size:13px; margin-left:5px;" onclick="deleteDebt('${row.id}', ${row.amount}, ${row.is_paid})">削除</button>`;
+                
+                actionTdContent = `${payButton} ${deleteButton}`.trim() || '-';
+            }
 
             html += `
             <tr>
@@ -437,8 +426,7 @@ async function loadHistory(){
                     ${row.is_paid ? '<span class="status-paid">返済済み</span>' : '<span class="status-unpaid">未返済</span>'}
                 </td>
                 <td>
-                    ${!row.is_paid ? `<button style="padding:6px 12px; font-size:13px;" onclick="markPaid('${row.id}', ${row.amount})">返済済みにする</button>` : '-'}
-                    ${deleteButton}
+                    ${actionTdContent}
                 </td>
             </tr>`;
         }
@@ -451,6 +439,10 @@ async function loadHistory(){
 // 借金追加
 async function addDebt(){
     if (!supabaseClient) return;
+    if (!isAdminLoggedIn) {
+        alert("権限がありません");
+        return;
+    }
     const date = document.getElementById("dateInput").value;
     const amount = Number(document.getElementById("amountInput").value);
     const reason = document.getElementById("reasonInput").value;
@@ -483,6 +475,10 @@ async function addDebt(){
 // 返済完了処理
 async function markPaid(historyId, amount){
     if (!supabaseClient) return;
+    if (!isAdminLoggedIn) {
+        alert("権限がありません");
+        return;
+    }
     if(!confirm("この項目を返済済みにしますか？")) return;
 
     await supabaseClient.from("history").update({ is_paid: true }).eq("id", historyId);
@@ -500,9 +496,12 @@ async function markPaid(historyId, amount){
 // 削除処理 (管理者用)
 async function deleteDebt(historyId, amount, isPaid){
     if (!supabaseClient) return;
+    if (!isAdminLoggedIn) {
+        alert("権限がありません");
+        return;
+    }
     if (!confirm("本当にこのデータを完全に削除しますか？\n(未返済データの場合、総額からも差し引かれます)")) return;
 
-    // 1. 履歴から削除
     const { error: deleteError } = await supabaseClient
         .from("history")
         .delete()
@@ -513,7 +512,6 @@ async function deleteDebt(historyId, amount, isPaid){
         return;
     }
 
-    // 2. もし消したデータが「未返済」だった場合、総額からその金額を引く
     if (!isPaid) {
         const { data: debtRow } = await supabaseClient.from("debt").select("total").eq("id", 1).single();
         await supabaseClient
