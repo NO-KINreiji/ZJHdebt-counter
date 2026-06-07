@@ -81,7 +81,7 @@ h2 {
     word-break: break-all;
 }
 
-/* ボタン共通設定 */
+/* ボタン共通設定（はみ出し防止） */
 button{
     border: none;
     border-radius: 12px;
@@ -96,6 +96,7 @@ button{
     align-items: center;
     justify-content: center;
     gap: 8px;
+    max-width: 100%;
 }
 
 button:hover{
@@ -123,6 +124,7 @@ button.btn-danger:hover {
     gap: 12px;
     justify-content: center;
     margin-bottom: 20px;
+    flex-wrap: wrap; /* 画面幅が狭いときに自動で折り返す */
 }
 
 .panel{
@@ -164,7 +166,7 @@ input:focus {
     border-top: 1px solid #38414f;
 }
 
-/* レスポンシブテーブル設計 */
+/* タブレット・PC用テーブル設計 */
 .history-container{
     margin-top: 15px;
     border-radius: 12px;
@@ -205,6 +207,13 @@ tr:last-child {
 .status-unpaid{
     color: var(--danger-color);
     font-weight: 600;
+}
+
+/* 操作ボタンのコンテナ（横並びと折り返し） */
+.action-buttons-wrap {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
 /* 自作カスタム確認ダイアログ(モーダル) */
@@ -257,7 +266,7 @@ tr:last-child {
 /* トースト通知 (スクロールしても常に「画面」の最上部に固定) */
 .toast-container {
     position: fixed;
-    top: 25px;                /* スクロール位置に関係なく、ブラウザ画面の1番上からの距離 */
+    top: 25px;                
     left: 50%;
     transform: translateX(-50%) translateY(-30px);
     background: #2e3846;
@@ -267,7 +276,7 @@ tr:last-child {
     font-size: 18px;          
     font-weight: 700;          
     box-shadow: 0 12px 30px rgba(0,0,0,0.4);
-    z-index: 10005;           /* 最前面に表示されるよう数値を引き上げ */
+    z-index: 10005;           
     opacity: 0;
     pointer-events: none;
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -280,12 +289,13 @@ tr:last-child {
     opacity: 1;
 }
 
-/* モバイル向けカードUI変換 (スマホ表示) */
+/* スマートフォン向けの完全レスポンシブ調整 (崩れ対策) */
 @media(max-width: 650px) {
     body { padding: 12px; }
     .container { margin: 10px auto; }
     .panel { padding: 20px; }
     
+    /* テーブルをスマートフォンのカード型UIに完全変換 */
     table, thead, tbody, th, td, tr { 
         display: block; 
     }
@@ -298,23 +308,30 @@ tr:last-child {
         border: 1px solid #38414f; 
         border-radius: 12px; 
         margin-bottom: 15px; 
-        padding: 10px;
+        padding: 12px;
         background: #1a1e24;
     }
     td { 
         border: none;
         position: relative;
-        padding-left: 45%; 
-        text-align: right;
-        padding-top: 10px;
-        padding-bottom: 10px;
+        padding-left: 35%; /* 左側のラベル用スペース */
+        text-align: right;  /* 値は右寄せ */
+        padding-top: 12px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #252b35;
+        min-height: 45px;
+        word-break: break-all;
     }
+    td:last-child {
+        border-bottom: none;
+    }
+    /* 左側に固定する見出しテキストのスタイルと位置決め */
     td:before { 
         position: absolute;
-        top: 10px;
+        top: 50%;
         left: 12px;
-        width: 40%; 
-        padding-right: 10px; 
+        transform: translateY(-50%);
+        width: 30%; 
         white-space: nowrap;
         text-align: left;
         font-weight: 600;
@@ -326,20 +343,34 @@ tr:last-child {
     td:nth-of-type(4):before { content: "状態"; }
     td:nth-of-type(5):before { content: "操作"; }
     
-    td button {
+    /* スマホ時の操作ボタンレイアウト */
+    td .action-buttons-wrap {
+        justify-content: flex-end; /* 右寄せ */
         width: 100%;
-        margin-bottom: 5px;
     }
+    td button {
+        width: 100%; /* スマホではボタンを横いっぱいに広げて押しやすく */
+        margin-bottom: 4px;
+    }
+    td button:last-child {
+        margin-bottom: 0;
+    }
+    
+    .button-group button {
+        width: 100%; /* トップのメインボタンもスマホでは全幅に */
+    }
+
     .modal-buttons {
-        flex-direction: column-reverse;
+        flex-direction: column-reverse; /* スマホではキャンセルを下に */
     }
     .modal-buttons button {
         width: 100%;
     }
     .toast-container {
         font-size: 16px;
-        padding: 16px 28px;
-        width: 85%;
+        padding: 16px 24px;
+        width: 90%;
+        min-width: auto;
     }
 }
 </style>
@@ -414,7 +445,6 @@ tr:last-child {
 window.addEventListener('beforeunload', () => {
     window.scrollTo(0, 0);
 });
-// 念のため、読み込み直後にも最上部へ強制移動させる
 window.addEventListener('load', () => {
     setTimeout(() => {
         window.scrollTo(0, 0);
@@ -564,9 +594,10 @@ async function loadHistory(){
                 const payButton = !row.is_paid 
                     ? `<button style="padding:6px 12px; font-size:13px;" onclick="markPaid('${row.id}', ${row.amount})">返済済みにする</button>` 
                     : '';
-                const deleteButton = `<button class="btn-danger" style="padding:6px 12px; font-size:13px; margin-left:5px;" onclick="deleteDebt('${row.id}', ${row.amount}, ${row.is_paid})">削除</button>`;
+                const deleteButton = `<button class="btn-danger" style="padding:6px 12px; font-size:13px;" onclick="deleteDebt('${row.id}', ${row.amount}, ${row.is_paid})">削除</button>`;
                 
-                actionTdContent = `${payButton} ${deleteButton}`.trim() || '-';
+                // 横並びが崩れないようラッパーを噛ませる
+                actionTdContent = `<div class="action-buttons-wrap">${payButton} ${deleteButton}</div>`;
             }
 
             html += `
