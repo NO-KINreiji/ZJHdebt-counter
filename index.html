@@ -272,12 +272,13 @@ tr:last-child {
     justify-content: center;
 }
 
-/* 🌟 トースト通知：どんなにスクロールしても画面最上部に完全固定 🌟 */
+/* 🌟 トースト通知：端末画面の最上部固定（他の全要素・スクロールから100%独立） 🌟 */
 .toast-container {
     position: fixed;
-    top: 20px; /* スクリプトやスクロールに干渉されない絶対値 */
+    /* アニメーションの挙動を安定させるため、画面上端からの絶対値で制御 */
+    top: -100px; 
     left: 50%;
-    transform: translateX(-50%) translateY(-50px); /* 初期状態は少し上に隠す */
+    transform: translateX(-50%); 
     background: #2e3846;
     color: #fff;
     padding: 16px 32px;       
@@ -285,18 +286,18 @@ tr:last-child {
     font-size: 16px;          
     font-weight: 700;          
     box-shadow: 0 12px 35px rgba(0, 0, 0, 0.5);
-    z-index: 100000 !important; /* 他のどのUI要素よりも最前面に配置 */
+    z-index: 200000 !important; /* モーダルすらも超える絶対的最前面 */
     opacity: 0;
     pointer-events: none;
-    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+    transition: top 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
     border: 2px solid #475569; 
     text-align: center;
     min-width: 280px;
-    max-width: 90%; /* 画面からはみ出さないストッパー */
+    max-width: 90%; 
 }
-/* アクティブ時（画面中央上部にきれいにスライドイン） */
+/* アクティブ時：画面の最上部（20pxの位置）に完全に固定 */
 .toast-container.active {
-    transform: translateX(-50%) translateY(0);
+    top: 20px;
     opacity: 1;
 }
 
@@ -388,7 +389,9 @@ tr:last-child {
         font-size: 15px;
         padding: 14px 24px;
         min-width: auto;
-        top: 15px; /* スマホ時は少しだけ上に詰める */
+    }
+    .toast-container.active {
+        top: 15px; /* スマホ時は画面最上部15pxの位置に固定 */
     }
 }
 </style>
@@ -459,17 +462,26 @@ tr:last-child {
 </div>
 
 <script>
-// 再読み込み(リロード)時の初期化処理
+// 🌟 ブラウザ固有の「前回のスクロール位置を自動復元する機能」を強制無効化 🌟
+if ('scrollRestoration' in history) {
+    history.scrollRestoration = 'manual';
+}
+
+// ページ読み込み・リロード時の初期化処理
 function resetPageOnLoad() {
-    window.scrollTo(0, 0);
+    window.scrollTo(0, 0); // 必ず一番上にスクロール
+    
     const historyPanel = document.getElementById("historyPanel");
     const adminPanel = document.getElementById("adminPanel");
     if (historyPanel) historyPanel.style.display = "none";
     if (adminPanel) adminPanel.style.display = "none";
 }
 
+// ページのロード、およびコンポーネントが完全に描画されたタイミングで確実に実行
 window.addEventListener('beforeunload', resetPageOnLoad);
 window.addEventListener('load', () => {
+    resetPageOnLoad();
+    // 処理の取りこぼしを防ぐためのバックアップ実行
     setTimeout(resetPageOnLoad, 0);
 });
 
