@@ -191,12 +191,12 @@ const CONFIG_URL = "https://cjbwqutwvymejgsdnjzf.supabase.co";
 const CONFIG_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqYndxdXR3dnltZWpnc2RuanpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3OTgyMjIsImV4cCI6MjA5NjM3NDIyMn0.C20QTlycDBvgfMjwAGaPQ1VLhlPj0iGA3C3xYi463bs";
 const ADMIN_PASSWORD = "zjhkanekaesanai";
 
-let supabase = null;
+// 競合回避のため独自変数名に変更
+let supabaseClient = null;
 
-// 二重定義エラーを完全に防ぐため、独自の安全な初期化を実行
 try {
     if (window.supabase && window.supabase.createClient) {
-        supabase = window.supabase.createClient(CONFIG_URL, CONFIG_KEY);
+        supabaseClient = window.supabase.createClient(CONFIG_URL, CONFIG_KEY);
     } else {
         document.getElementById("totalDisplay").innerText = "ライブラリ読み込み失敗";
     }
@@ -241,9 +241,9 @@ function loginAdmin(){
 
 // データ取得
 async function loadTotal(){
-    if (!supabase) return;
+    if (!supabaseClient) return;
     try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from("debt")
             .select("total")
             .eq("id", 1)
@@ -268,9 +268,9 @@ async function loadTotal(){
 }
 
 async function loadHistory(){
-    if (!supabase) return;
+    if (!supabaseClient) return;
     try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from("history")
             .select("*")
             .order("date", { ascending: false });
@@ -302,7 +302,7 @@ async function loadHistory(){
 }
 
 async function addDebt(){
-    if (!supabase) return;
+    if (!supabaseClient) return;
     const date = document.getElementById("dateInput").value;
     const amount = Number(document.getElementById("amountInput").value);
     const reason = document.getElementById("reasonInput").value;
@@ -312,7 +312,7 @@ async function addDebt(){
         return;
     }
 
-    const { error: insertError } = await supabase
+    const { error: insertError } = await supabaseClient
         .from("history")
         .insert([{ date, amount, reason, is_paid: false }]);
 
@@ -321,8 +321,8 @@ async function addDebt(){
         return;
     }
 
-    const { data: debtRow } = await supabase.from("debt").select("total").eq("id", 1).single();
-    await supabase.from("debt").update({ total: Number(debtRow.total) + amount }).eq("id", 1);
+    const { data: debtRow } = await supabaseClient.from("debt").select("total").eq("id", 1).single();
+    await supabaseClient.from("debt").update({ total: Number(debtRow.total) + amount }).eq("id", 1);
 
     document.getElementById("amountInput").value = "";
     document.getElementById("reasonInput").value = "";
@@ -333,13 +333,13 @@ async function addDebt(){
 }
 
 async function markPaid(historyId, amount){
-    if (!supabase) return;
+    if (!supabaseClient) return;
     if(!confirm("返済済みにしますか？")) return;
 
-    await supabase.from("history").update({ is_paid: true }).eq("id", historyId);
-    const { data: debtRow } = await supabase.from("debt").select("total").eq("id", 1).single();
+    await supabaseClient.from("history").update({ is_paid: true }).eq("id", historyId);
+    const { data: debtRow } = await supabaseClient.from("debt").select("total").eq("id", 1).single();
 
-    await supabase
+    await supabaseClient
         .from("debt")
         .update({ total: Math.max(0, Number(debtRow.total) - Number(amount)) })
         .eq("id", 1);
@@ -349,11 +349,11 @@ async function markPaid(historyId, amount){
 }
 
 // エントリーポイント
-if (supabase) {
+if (supabaseClient) {
     loadTotal();
     loadHistory();
-    supabase.channel("debt-realtime").on("postgres_changes", { event: "*", schema: "public", table: "debt" }, () => { loadTotal(); }).subscribe();
-    supabase.channel("history-realtime").on("postgres_changes", { event: "*", schema: "public", table: "history" }, () => { loadHistory(); }).subscribe();
+    supabaseClient.channel("debt-realtime").on("postgres_changes", { event: "*", schema: "public", table: "debt" }, () => { loadTotal(); }).subscribe();
+    supabaseClient.channel("history-realtime").on("postgres_changes", { event: "*", schema: "public", table: "history" }, () => { loadHistory(); }).subscribe();
 }
 </script>
 
