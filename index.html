@@ -254,26 +254,26 @@ tr:last-child {
     justify-content: center;
 }
 
-/* トースト通知 (大きく、見やすく調整) */
+/* トースト通知 (スクロールしても常に「画面」の最上部に固定) */
 .toast-container {
     position: fixed;
-    top: 25px;
+    top: 25px;                /* スクロール位置に関係なく、ブラウザ画面の1番上からの距離 */
     left: 50%;
     transform: translateX(-50%) translateY(-30px);
     background: #2e3846;
     color: #fff;
-    padding: 18px 36px;       /* パディングを大きく */
+    padding: 18px 36px;       
     border-radius: 50px;
-    font-size: 18px;          /* フォントサイズを大きく */
-    font-weight: 700;          /* 太字に */
+    font-size: 18px;          
+    font-weight: 700;          
     box-shadow: 0 12px 30px rgba(0,0,0,0.4);
-    z-index: 10000;
+    z-index: 10005;           /* 最前面に表示されるよう数値を引き上げ */
     opacity: 0;
     pointer-events: none;
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    border: 2px solid #475569; /* 枠線を少し太く */
+    border: 2px solid #475569; 
     text-align: center;
-    min-width: 280px;          /* 横幅の最小値を確保 */
+    min-width: 280px;          
 }
 .toast-container.active {
     transform: translateX(-50%) translateY(0);
@@ -410,6 +410,17 @@ tr:last-child {
 <div id="toast" class="toast-container"></div>
 
 <script>
+// 再読み込み(リロード)時に必ずページの一番上（スクロール位置0）を表示する処理
+window.addEventListener('beforeunload', () => {
+    window.scrollTo(0, 0);
+});
+// 念のため、読み込み直後にも最上部へ強制移動させる
+window.addEventListener('load', () => {
+    setTimeout(() => {
+        window.scrollTo(0, 0);
+    }, 0);
+});
+
 // --- configuration ---
 const CONFIG_URL = "https://cjbwqutwvymejgsdnjzf.supabase.co";
 const CONFIG_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqYndxdXR3dnltZWpnc2RuanpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3OTgyMjIsImV4cCI6MjA5NjM3NDIyMn0.C20QTlycDBvgfMjwAGaPQ1VLhlPj0iGA3C3xYi463bs";
@@ -428,7 +439,7 @@ try {
     console.error("Supabase初期化エラー:", e);
 }
 
-// 邪魔なチェックボックスを出さない自作確認画面
+// 自作確認画面
 function showCustomConfirm(message, isDangerAction = false) {
     return new Promise((resolve) => {
         const modal = document.getElementById("customModal");
@@ -452,7 +463,7 @@ function showCustomConfirm(message, isDangerAction = false) {
     });
 }
 
-// ブラウザのalertを使わずに自動で消えるメッセージ通知
+// 自動で消えるメッセージ通知
 function showToast(message, type = "success") {
     const toast = document.getElementById("toast");
     toast.innerText = message;
@@ -460,11 +471,11 @@ function showToast(message, type = "success") {
     if(type === "error") {
         toast.style.borderColor = "var(--danger-color)";
         toast.style.color = "var(--danger-color)";
-        toast.style.background = "#3d2429"; /* エラー時は背景も少し赤暗くして視認性アップ */
+        toast.style.background = "#3d2429"; 
     } else {
         toast.style.borderColor = "var(--success-color)";
         toast.style.color = "var(--success-color)";
-        toast.style.background = "#1e3129"; /* 成功時は背景も少し緑暗く */
+        toast.style.background = "#1e3129"; 
     }
 
     toast.classList.add("active");
