@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZJH借金カウンター</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    background:#111;
+    color:#fff;
+    font-family:sans-serif;
+    min-height:100vh;
+}
+
+.container{
+    max-width:1000px;
+    margin:auto;
+    padding:20px;
+}
+
+h1{
+    text-align:center;
+    color:#ff4d4d;
+    margin-bottom:20px;
+}
+
+#totalDisplay{
+    text-align:center;
+    font-size:clamp(1.8rem,4vw,3rem);
+    font-weight:bold;
+    margin-bottom:25px;
+    color:#ff6666;
+}
+
+.center{
+    text-align:center;
+}
+
+button{
+    border:none;
+    border-radius:10px;
+    padding:12px 16px;
+    cursor:pointer;
+    font-size:16px;
+    margin:4px;
+}
+
+.panel{
+    background:#222;
+    border-radius:15px;
+    padding:20px;
+    margin-top:15px;
+}
+
+input{
+    width:100%;
+    padding:12px;
+    margin:8px 0;
+    border:none;
+    border-radius:8px;
+    font-size:16px;
+}
+
+#settingsPanel,
+#historyPanel,
+#adminPanel,
+#adminControls{
+    display:none;
+}
+
+.history-container{
+    max-height:500px;
+    overflow-y:auto;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+th,td{
+    border:1px solid #444;
+    padding:10px;
+    text-align:center;
+}
+
+.status-paid{
+    color:#66ff66;
+    font-weight:bold;
+}
+
+.status-unpaid{
+    color:#ff6666;
+    font-weight:bold;
+}
+
+.gear{
+    position:fixed;
+    right:20px;
+    bottom:20px;
+    font-size:24px;
+    width:60px;
+    height:60px;
+}
+
+@media(max-width:700px){
+    table{
+        font-size:12px;
+    }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<h1>ZJH借金カウンター</h1>
+
+<div id="totalDisplay">
+読み込み中...
+</div>
+
+<div id="settingsPanel" class="panel">
+
+<h2>設定</h2>
+
+<button onclick="toggleHistory()">
+内訳確認
+</button>
+
+<button onclick="toggleAdmin()">
+管理者モード
+</button>
+
+</div>
+
+<div id="historyPanel" class="panel">
+
+<h2>内訳</h2>
+
+<div class="history-container">
+
+<table>
+
+<thead>
+<tr>
+<th>日付</th>
+<th>金額</th>
+<th>用途</th>
+<th>状態</th>
+<th>操作</th>
+</tr>
+</thead>
+
+<tbody id="historyBody"></tbody>
+
+</table>
+
+</div>
+
+</div>
+
+<div id="adminPanel" class="panel">
+
+<h2>管理者ログイン</h2>
+
+<input
+type="password"
+id="adminPassword"
+placeholder="パスワード">
+
+<button onclick="loginAdmin()">
+ログイン
+</button>
+
+<div id="adminControls">
+
+<h2>借金追加</h2>
+
+<input
+type="date"
+id="dateInput">
+
+<input
+type="number"
+id="amountInput"
+placeholder="金額">
+
+<input
+type="text"
+id="reasonInput"
+placeholder="用途">
+
+<button onclick="addDebt()">
+保存
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+<button
+class="gear"
+onclick="toggleSettings()">
+⚙️
+</button>
+
+<script>
+
+/* =========================================
+
+ここにProject URLを貼る
+
+例:
+https://xxxxxxxx.supabase.co
+
+========================================= */
+
+const SUPABASE_URL =
+"https://cjbwqutwvymejgsdnjzf.supabase.co";
+
+/* =========================================
+
+ここにanon keyを貼る
+
+Settings
+↓
+API Keys
+↓
+anon public key
+
+========================================= */
+
+const SUPABASE_ANON_KEY =
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqYndxdXR3dnltZWpnc2RuanpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3OTgyMjIsImV4cCI6MjA5NjM3NDIyMn0.C20QTlycDBvgfMjwAGaPQ1VLhlPj0iGA3C3xYi463bs";
+
+const ADMIN_PASSWORD =
+"zjhkanekaesanai";
+
+const supabase =
+window.supabase.createClient(
+SUPABASE_URL,
+SUPABASE_ANON_KEY
+);
+
+function toggleSettings(){
+
+const panel =
+document.getElementById("settingsPanel");
+
+panel.style.display =
+panel.style.display === "block"
+? "none"
+: "block";
+
+}
+
+function toggleHistory(){
+
+const panel =
+document.getElementById("historyPanel");
+
+panel.style.display =
+panel.style.display === "block"
+? "none"
+: "block";
+
+loadHistory();
+
+}
+
+function toggleAdmin(){
+
+const panel =
+document.getElementById("adminPanel");
+
+panel.style.display =
+panel.style.display === "block"
+? "none"
+: "block";
+
+}
+
+function loginAdmin(){
+
+const pass =
+document.getElementById("adminPassword").value;
+
+if(pass === ADMIN_PASSWORD){
+
+document.getElementById(
+"adminControls"
+).style.display = "block";
+
+alert("ログイン成功");
+
+}else{
+
+alert("パスワードが違います");
+
+}
+
+}
+
+async function loadTotal(){
+
+const { data, error } =
+await supabase
+.from("debt")
+.select("total")
+.eq("id",1)
+.single();
+
+if(error){
+console.error(error);
+return;
+}
+
+document.getElementById(
+"totalDisplay"
+).innerHTML =
+`ZJHが俺にしている借金は<br>${Number(data.total).toLocaleString()}円`;
+
+}
+
+async function loadHistory(){
+
+const { data, error } =
+await supabase
+.from("history")
+.select("*")
+.order("created_at",{
+ascending:false
+});
+
+if(error){
+console.error(error);
+return;
+}
+
+let html = "";
+
+for(const row of data){
+
+html += `
+<tr>
+<td>${row.date}</td>
+<td>${Number(row.amount).toLocaleString()}円</td>
+<td>${row.reason}</td>
+
+<td>
+${
+row.is_paid
+? '<span class="status-paid">返済済み</span>'
+: '<span class="status-unpaid">未返済</span>'
+}
+</td>
+
+<td>
+${
+!row.is_paid
+?
+`<button onclick="markPaid('${row.id}',${row.amount})">
+返済済みにする
+</button>`
+:
+'-'
+}
+</td>
+</tr>
+`;
+}
+
+document.getElementById(
+"historyBody"
+).innerHTML = html;
+
+}
+
+async function addDebt(){
+
+const date =
+document.getElementById("dateInput").value;
+
+const amount =
+Number(
+document.getElementById("amountInput").value
+);
+
+const reason =
+document.getElementById("reasonInput").value;
+
+if(!date || !amount || !reason){
+
+alert("全項目入力してください");
+
+return;
+
+}
+
+const { error: insertError } =
+await supabase
+.from("history")
+.insert([
+{
+date,
+amount,
+reason,
+is_paid:false
+}
+]);
+
+if(insertError){
+console.error(insertError);
+alert("追加失敗");
+return;
+}
+
+const { data: debtRow } =
+await supabase
+.from("debt")
+.select("total")
+.eq("id",1)
+.single();
+
+await supabase
+.from("debt")
+.update({
+total:
+Number(debtRow.total)
++
+amount
+})
+.eq("id",1);
+
+document.getElementById("amountInput").value="";
+document.getElementById("reasonInput").value="";
+
+await loadTotal();
+await loadHistory();
+
+alert("保存完了");
+
+}
+
+async function markPaid(historyId, amount){
+
+if(!confirm("返済済みにしますか？")){
+return;
+}
+
+await supabase
+.from("history")
+.update({
+is_paid:true
+})
+.eq("id",historyId);
+
+const { data: debtRow } =
+await supabase
+.from("debt")
+.select("total")
+.eq("id",1)
+.single();
+
+await supabase
+.from("debt")
+.update({
+total:
+Math.max(
+0,
+Number(debtRow.total) - Number(amount)
+)
+})
+.eq("id",1);
+
+await loadTotal();
+await loadHistory();
+
+}
+
+loadTotal();
+
+loadHistory();
+
+supabase
+.channel("debt-realtime")
+.on(
+"postgres_changes",
+{
+event:"*",
+schema:"public",
+table:"debt"
+},
+() => {
+loadTotal();
+}
+)
+.subscribe();
+
+supabase
+.channel("history-realtime")
+.on(
+"postgres_changes",
+{
+event:"*",
+schema:"public",
+table:"history"
+},
+() => {
+loadHistory();
+}
+)
+.subscribe();
+
+</script>
+
+</body>
+</html>
