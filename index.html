@@ -254,23 +254,26 @@ tr:last-child {
     justify-content: center;
 }
 
-/* トースト通知 (画面上部にふわっと出るお知らせ) */
+/* トースト通知 (大きく、見やすく調整) */
 .toast-container {
     position: fixed;
-    top: 20px;
+    top: 25px;
     left: 50%;
-    transform: translateX(-50%) translateY(-20px);
+    transform: translateX(-50%) translateY(-30px);
     background: #2e3846;
     color: #fff;
-    padding: 14px 28px;
+    padding: 18px 36px;       /* パディングを大きく */
     border-radius: 50px;
-    font-weight: 500;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    font-size: 18px;          /* フォントサイズを大きく */
+    font-weight: 700;          /* 太字に */
+    box-shadow: 0 12px 30px rgba(0,0,0,0.4);
     z-index: 10000;
     opacity: 0;
     pointer-events: none;
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    border: 1px solid #475569;
+    border: 2px solid #475569; /* 枠線を少し太く */
+    text-align: center;
+    min-width: 280px;          /* 横幅の最小値を確保 */
 }
 .toast-container.active {
     transform: translateX(-50%) translateY(0);
@@ -333,6 +336,11 @@ tr:last-child {
     .modal-buttons button {
         width: 100%;
     }
+    .toast-container {
+        font-size: 16px;
+        padding: 16px 28px;
+        width: 85%;
+    }
 }
 </style>
 </head>
@@ -382,7 +390,7 @@ tr:last-child {
             <label style="color:var(--text-muted);">金額 (円)</label>
             <input type="number" id="amountInput" placeholder="例: 5000">
             <label style="color:var(--text-muted);">用途</label>
-            <input type="text" id="reasonInput" placeholder="例: 居酒屋の代わり、ゲーム代">
+            <input type="text" id="reasonInput" placeholder="例: クレーンゲーム代、自転車の駐輪代">
             <button onclick="addDebt()" style="width: 100%;">この内容で保存する</button>
         </div>
     </div>
@@ -452,16 +460,18 @@ function showToast(message, type = "success") {
     if(type === "error") {
         toast.style.borderColor = "var(--danger-color)";
         toast.style.color = "var(--danger-color)";
+        toast.style.background = "#3d2429"; /* エラー時は背景も少し赤暗くして視認性アップ */
     } else {
         toast.style.borderColor = "var(--success-color)";
         toast.style.color = "var(--success-color)";
+        toast.style.background = "#1e3129"; /* 成功時は背景も少し緑暗く */
     }
 
     toast.classList.add("active");
 
     setTimeout(() => {
         toast.classList.remove("active");
-    }, 2500); // 2.5秒後に自動消去
+    }, 2500); 
 }
 
 // パネル表示トグル
