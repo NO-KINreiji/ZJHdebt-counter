@@ -207,6 +207,53 @@ tr:last-child {
     font-weight: 600;
 }
 
+/* 自作カスタムダイアログ(モーダル)のCSS */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+.modal-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+.modal-box {
+    background: var(--panel-bg);
+    padding: 30px;
+    border-radius: 20px;
+    max-width: 450px;
+    width: 90%;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    text-align: center;
+    transform: translateY(20px);
+    transition: transform 0.2s ease;
+}
+.modal-overlay.active .modal-box {
+    transform: translateY(0);
+}
+.modal-text {
+    font-size: 16px;
+    line-height: 1.6;
+    margin-bottom: 25px;
+    white-space: pre-wrap;
+}
+.modal-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
 /* モバイル向けカードUI変換 (スマホ表示) */
 @media(max-width: 650px) {
     body { padding: 12px; }
@@ -256,6 +303,12 @@ tr:last-child {
     td button {
         width: 100%;
         margin-bottom: 5px;
+    }
+    .modal-buttons {
+        flex-direction: column-reverse;
+    }
+    .modal-buttons button {
+        width: 100%;
     }
 }
 </style>
@@ -313,6 +366,16 @@ tr:last-child {
 
 </div>
 
+<div id="customModal" class="modal-overlay">
+    <div class="modal-box">
+        <div id="modalText" class="modal-text">ここにメッセージが入ります</div>
+        <div class="modal-buttons">
+            <button id="modalCancelBtn" class="btn-secondary">キャンセル</button>
+            <button id="modalConfirmBtn">確定</button>
+        </div>
+    </div>
+</div>
+
 <script>
 // --- configuration ---
 const CONFIG_URL = "https://cjbwqutwvymejgsdnjzf.supabase.co";
@@ -330,6 +393,37 @@ try {
     }
 } catch (e) {
     console.error("Supabase初期化エラー:", e);
+}
+
+// ブラウザの仕様によるチェックボックスを完全排除する自作ダイアログ関数
+function showCustomConfirm(message, isDangerAction = false) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById("customModal");
+        const textZone = document.getElementById("modalText");
+        const confirmBtn = document.getElementById("modalConfirmBtn");
+        const cancelBtn = document.getElementById("modalCancelBtn");
+
+        textZone.innerText = message;
+
+        // 削除などの危険な操作のときは確定ボタンを赤くする
+        if (isDangerAction) {
+            confirmBtn.className = "btn-danger";
+        } else {
+            confirmBtn.className = "";
+        }
+
+        modal.classList.add("active");
+
+        const cleanup = (result) => {
+            modal.classList.remove("active");
+            confirmBtn.onclick = null;
+            cancelBtn.onclick = null;
+            resolve(result);
+        };
+
+        confirmBtn.onclick = () => cleanup(true);
+        cancelBtn.onclick = () => cleanup(false);
+    });
 }
 
 // パネル表示トグル
@@ -356,7 +450,7 @@ function loginAdmin(){
         isAdminLoggedIn = true;
         document.getElementById("adminControls").style.display = "block";
         alert("管理者としてログインしました");
-        loadHistory(); // ボタン類を再描画するために履歴をリロード
+        loadHistory(); 
     }else{
         alert("パスワードが違います");
     }
@@ -407,7 +501,6 @@ async function loadHistory(){
         for(const row of data){
             let actionTdContent = "-";
 
-            // 管理者ログイン時のみ操作可能にする
             if (isAdminLoggedIn) {
                 const payButton = !row.is_paid 
                     ? `<button style="padding:6px 12px; font-size:13px;" onclick="markPaid('${row.id}', ${row.amount})">返済済みにする</button>` 
@@ -479,7 +572,10 @@ async function markPaid(historyId, amount){
         alert("権限がありません");
         return;
     }
-    if(!confirm("この項目を返済済みにしますか？")) return;
+    
+    // 自作ダイアログを呼び出し
+    const confirmed = await showCustomConfirm("この項目を返済済みにしますか？", false);
+    if(!confirmed) return;
 
     await supabaseClient.from("history").update({ is_paid: true }).eq("id", historyId);
     const { data: debtRow } = await supabaseClient.from("debt").select("total").eq("id", 1).single();
@@ -500,7 +596,10 @@ async function deleteDebt(historyId, amount, isPaid){
         alert("権限がありません");
         return;
     }
-    if (!confirm("本当にこのデータを完全に削除しますか？\n(未返済データの場合、総額からも差し引かれます)")) return;
+
+    // 自作ダイアログを呼び出し(削除なので第二引数を true にしてボタンを赤くする)
+    const confirmed = await showCustomConfirm("本当にこのデータを完全に削除しますか？\n（※未返済データの場合、総額からも差し引かれます）", true);
+    if (!confirmed) return;
 
     const { error: deleteError } = await supabaseClient
         .from("history")
