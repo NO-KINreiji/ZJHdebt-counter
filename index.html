@@ -23,7 +23,7 @@
 *{
     margin:0;
     padding:0;
-    box-sizing:border-box; /* すべての要素の幅計算を安全に統一 */
+    box-sizing:border-box; 
 }
 
 body{
@@ -32,7 +32,7 @@ body{
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     min-height: 100vh;
     padding: 20px;
-    overflow-x: hidden; /* 横スクロール（はみ出し）を強制的に防ぐ */
+    overflow-x: hidden; 
 }
 
 .container{
@@ -128,7 +128,7 @@ button.btn-danger:hover {
     flex-wrap: wrap; 
 }
 
-/* 枠線の飛び出しを防ぐ入力欄設定 */
+/* 入力欄設定 */
 input, select{
     width: 100%;
     max-width: 100%;
@@ -153,12 +153,11 @@ input:focus {
     border-color: var(--accent-color);
 }
 
-/* パネル（一覧・管理者）の共通設定 */
+/* パネル設定 */
 .panel{
     background: var(--panel-bg);
     border-radius: 20px;
     padding: 30px;
-    /* 同時に開いたときのために上下に十分な余白を確保 */
     margin-top: 20px;
     margin-bottom: 40px; 
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
@@ -177,7 +176,7 @@ input:focus {
     border-top: 1px solid #38414f;
 }
 
-/* タブレット・PC用テーブル設計 */
+/* テーブル設計 */
 .history-container{
     margin-top: 15px;
     border-radius: 12px;
@@ -220,7 +219,6 @@ tr:last-child {
     font-weight: 600;
 }
 
-/* 操作ボタンのコンテナ（PC・タブレット用） */
 .action-buttons-wrap {
     display: flex;
     gap: 8px;
@@ -274,27 +272,29 @@ tr:last-child {
     justify-content: center;
 }
 
-/* トースト通知 */
+/* 🌟 トースト通知：どんなにスクロールしても画面最上部に完全固定 🌟 */
 .toast-container {
     position: fixed;
-    top: 25px;                
+    top: 20px; /* スクリプトやスクロールに干渉されない絶対値 */
     left: 50%;
-    transform: translateX(-50%) translateY(-30px);
+    transform: translateX(-50%) translateY(-50px); /* 初期状態は少し上に隠す */
     background: #2e3846;
     color: #fff;
-    padding: 18px 36px;       
+    padding: 16px 32px;       
     border-radius: 50px;
-    font-size: 18px;          
+    font-size: 16px;          
     font-weight: 700;          
-    box-shadow: 0 12px 30px rgba(0,0,0,0.4);
-    z-index: 10005;           
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.5);
+    z-index: 100000 !important; /* 他のどのUI要素よりも最前面に配置 */
     opacity: 0;
     pointer-events: none;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
     border: 2px solid #475569; 
     text-align: center;
-    min-width: 280px;          
+    min-width: 280px;
+    max-width: 90%; /* 画面からはみ出さないストッパー */
 }
+/* アクティブ時（画面中央上部にきれいにスライドイン） */
 .toast-container.active {
     transform: translateX(-50%) translateY(0);
     opacity: 1;
@@ -308,7 +308,7 @@ tr:last-child {
     .panel { 
         padding: 24px 16px; 
         margin-top: 15px; 
-        margin-bottom: 30px; /* スマホでも重ならないよう確保 */
+        margin-bottom: 30px; 
     }
     
     table, thead, tbody, th, td, tr { 
@@ -358,7 +358,6 @@ tr:last-child {
     td:nth-of-type(4):before { content: "状態"; }
     td:nth-of-type(5):before { content: "操作"; }
     
-    /* スマホ時の操作ボタンレイアウト */
     td .action-buttons-wrap {
         display: flex;
         flex-direction: column; 
@@ -384,16 +383,19 @@ tr:last-child {
     .modal-buttons button {
         width: 100%;
     }
+    
     .toast-container {
-        font-size: 16px;
-        padding: 16px 24px;
-        width: 90%;
+        font-size: 15px;
+        padding: 14px 24px;
         min-width: auto;
+        top: 15px; /* スマホ時は少しだけ上に詰める */
     }
 }
 </style>
 </head>
 <body>
+
+<div id="toast" class="toast-container"></div>
 
 <div class="container">
 
@@ -456,8 +458,6 @@ tr:last-child {
     </div>
 </div>
 
-<div id="toast" class="toast-container"></div>
-
 <script>
 // 再読み込み(リロード)時の初期化処理
 function resetPageOnLoad() {
@@ -468,7 +468,6 @@ function resetPageOnLoad() {
     if (adminPanel) adminPanel.style.display = "none";
 }
 
-// ページを離れる前、および読み込み完了時に初期化を実行
 window.addEventListener('beforeunload', resetPageOnLoad);
 window.addEventListener('load', () => {
     setTimeout(resetPageOnLoad, 0);
