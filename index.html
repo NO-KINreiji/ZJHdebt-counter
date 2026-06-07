@@ -272,10 +272,9 @@ tr:last-child {
     justify-content: center;
 }
 
-/* 🌟 トースト通知：物理的な画面に対して完全固定 🌟 */
+/* トースト通知だから物理的な画面に対して完全固定 */
 .toast-container {
-    /* position: fixed を指定し、かつ top 制御を行うことで、ページのスクロール量に依存せず */
-    /* 常に「いま目に見えている端末画面の上からXXミリ・XXピクセル」の位置に独立して居座らせます */
+    /* position: fixedを指定し、かつtop制御を行うことで、ページのスクロール量に依存せず居座るという脳筋戦法 */
     position: fixed;
     top: -100px; /* 通常時は画面の外側（見えない場所）に配置 */
     left: 50%;
@@ -288,7 +287,7 @@ tr:last-child {
     font-weight: 700;          
     box-shadow: 0 12px 35px rgba(0, 0, 0, 0.5);
     
-    /* ページ内の他の要素（スクロールコンテナやz-index競合）に絶対に巻き込まれないように最高値を指定 */
+    /* ページ内の他の要素に巻き込まれないように最高値を指定 */
     z-index: 2147483647 !important; 
     
     opacity: 0;
@@ -301,13 +300,13 @@ tr:last-child {
     max-width: 90%; 
 }
 
-/* アクティブ時：どんなにサイトを下にスクロールしていても、物理画面の上から20pxの位置にピタッと出現 */
+/* アクティブ時はどんなにサイトを下にスクロールしていても、物理画面の上から20pxの位置に出現 */
 .toast-container.active {
     top: 20px;
     opacity: 1;
-}
+} 
 
-/* スマートフォン向けの完全レスポンシブ調整 */
+/* スマートフォン向け調整めんどい*/
 @media(max-width: 650px) {
     body { padding: 16px 12px; }
     .container { margin: 10px auto; }
@@ -532,7 +531,7 @@ function showCustomConfirm(message, isDangerAction = false) {
     });
 }
 
-// 自動で消えるメッセージ通知
+// 自動で消えるメッセージ通知超オシャレ
 function showToast(message, type = "success") {
     const toast = document.getElementById("toast");
     toast.innerText = message;
@@ -584,7 +583,7 @@ function loginAdmin(){
     }
 }
 
-// データ取得・表示
+// データ取得・表示だがなぜ動いているのか謎
 async function loadTotal(){
     if (!supabaseClient) return;
     try {
