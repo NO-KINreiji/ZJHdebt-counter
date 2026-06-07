@@ -8,6 +8,18 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
+:root {
+    --bg-color: #1a1e24;
+    --panel-bg: #252b35;
+    --text-color: #e2e8f0;
+    --text-muted: #94a3b8;
+    --accent-color: #6366f1;
+    --accent-hover: #4f46e5;
+    --danger-color: #ef4444;
+    --danger-hover: #dc2626;
+    --success-color: #10b981;
+}
+
 *{
     margin:0;
     padding:0;
@@ -15,122 +27,253 @@
 }
 
 body{
-    background:#111;
-    color:#fff;
-    font-family:sans-serif;
-    min-height:100vh;
+    background: var(--bg-color);
+    color: var(--text-color);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    min-height: 100vh;
+    padding: 20px;
 }
 
 .container{
-    max-width:1000px;
-    margin:auto;
-    padding:20px;
+    max-width: 800px;
+    margin: 40px auto;
+    width: 100%;
 }
 
 h1{
-    text-align:center;
-    color:#ff4d4d;
-    margin-bottom:20px;
+    text-align: center;
+    font-size: 1.8rem;
+    color: var(--text-color);
+    margin-bottom: 30px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+}
+
+h2 {
+    font-size: 1.3rem;
+    margin-bottom: 20px;
+    color: var(--text-color);
+    border-left: 4px solid var(--accent-color);
+    padding-left: 10px;
 }
 
 #totalDisplay{
-    text-align:center;
-    font-size:clamp(1.8rem,4vw,3rem);
-    font-weight:bold;
-    margin-bottom:25px;
-    color:#ff6666;
+    text-align: center;
+    background: var(--panel-bg);
+    padding: 40px 20px;
+    border-radius: 20px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    margin-bottom: 30px;
 }
 
+.total-label {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    margin-bottom: 15px;
+    display: block;
+}
+
+.total-amount {
+    font-size: clamp(2.5rem, 7vw, 4.5rem);
+    font-weight: 800;
+    color: var(--text-color);
+    line-height: 1.2;
+    word-break: break-all;
+}
+
+/* ボタン共通設定 */
 button{
-    border:none;
-    border-radius:10px;
-    padding:12px 16px;
-    cursor:pointer;
-    font-size:16px;
-    margin:4px;
-    background: #444;
+    border: none;
+    border-radius: 12px;
+    padding: 12px 24px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 500;
+    background: var(--accent-color);
     color: #fff;
-    transition: background 0.2s;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
 button:hover{
-    background: #555;
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+}
+
+button.btn-secondary {
+    background: #38414f;
+    color: var(--text-color);
+}
+button.btn-secondary:hover {
+    background: #475366;
+}
+
+button.btn-danger {
+    background: var(--danger-color);
+}
+button.btn-danger:hover {
+    background: var(--danger-hover);
+}
+
+.button-group {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 20px;
 }
 
 .panel{
-    background:#222;
-    border-radius:15px;
-    padding:20px;
-    margin-top:15px;
+    background: var(--panel-bg);
+    border-radius: 20px;
+    padding: 30px;
+    margin-top: 20px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
     display: none;
+    animation: fadeIn 0.3s ease;
 }
 
-input{
-    width:100%;
-    padding:12px;
-    margin:8px 0;
-    border:none;
-    border-radius:8px;
-    font-size:16px;
-    background: #333;
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+input, select{
+    width: 100%;
+    padding: 14px;
+    margin: 10px 0 20px 0;
+    border: 2px solid #38414f;
+    border-radius: 12px;
+    font-size: 16px;
+    background: #1a1e24;
     color: #fff;
+    transition: border-color 0.2s;
+}
+
+input:focus {
+    outline: none;
+    border-color: var(--accent-color);
 }
 
 #adminControls{
-    display:none;
-    margin-top: 20px;
-    padding-top: 20px;
-    border-top: 1px solid #444;
+    display: none;
+    margin-top: 30px;
+    padding-top: 30px;
+    border-top: 1px solid #38414f;
 }
 
+/* レスポンシブテーブル設計 */
 .history-container{
-    max-height:500px;
-    overflow-y:auto;
     margin-top: 15px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #38414f;
 }
 
 table{
-    width:100%;
-    border-collapse:collapse;
+    width: 100%;
+    border-collapse: collapse;
 }
 
-th,td{
-    border:1px solid #444;
-    padding:10px;
-    text-align:center;
+th, td{
+    padding: 16px;
+    text-align: left;
+    font-size: 15px;
 }
 
 th {
-    background: #333;
+    background: #1a1e24;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+tr {
+    border-bottom: 1px solid #38414f;
+}
+
+tr:last-child {
+    border-bottom: none;
 }
 
 .status-paid{
-    color:#66ff66;
-    font-weight:bold;
+    color: var(--success-color);
+    font-weight: 600;
 }
 
 .status-unpaid{
-    color:#ff6666;
-    font-weight:bold;
+    color: var(--danger-color);
+    font-weight: 600;
 }
 
+/* ギアボタン */
 .gear{
-    position:fixed;
-    right:20px;
-    bottom:20px;
-    font-size:24px;
-    width:60px;
-    height:60px;
-    background: #ff4d4d;
-    color: #fff;
+    position: fixed;
+    right: 25px;
+    bottom: 25px;
+    font-size: 24px;
+    width: 56px;
+    height: 56px;
+    background: var(--panel-bg);
+    color: var(--text-color);
     border-radius: 50%;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
     z-index: 1000;
+    border: 1px solid #38414f;
+}
+.gear:hover {
+    background: #38414f;
 }
 
-@media(max-width:700px){
-    table{
-        font-size:12px;
+/* モバイル向けカードUI変換 (スマホ表示) */
+@media(max-width: 650px) {
+    body { padding: 12px; }
+    .container { margin: 10px auto; }
+    .panel { padding: 20px; }
+    
+    table, thead, tbody, th, td, tr { 
+        display: block; 
+    }
+    thead tr { 
+        position: absolute; 
+        top: -9999px; 
+        left: -9999px; 
+    }
+    tr { 
+        border: 1px solid #38414f; 
+        border-radius: 12px; 
+        margin-bottom: 15px; 
+        padding: 10px;
+        background: #1a1e24;
+    }
+    td { 
+        border: none;
+        position: relative;
+        padding-left: 45%; 
+        text-align: right;
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
+    td:before { 
+        position: absolute;
+        top: 10px;
+        left: 12px;
+        width: 40%; 
+        padding-right: 10px; 
+        white-space: nowrap;
+        text-align: left;
+        font-weight: 600;
+        color: var(--text-muted);
+    }
+    td:nth-of-type(1):before { content: "日付"; }
+    td:nth-of-type(2):before { content: "金額"; }
+    td:nth-of-type(3):before { content: "用途"; }
+    td:nth-of-type(4):before { content: "状態"; }
+    td:nth-of-type(5):before { content: "操作"; }
+    
+    td button {
+        width: 100%;
     }
 }
 </style>
@@ -141,16 +284,18 @@ th {
 
     <h1>ZJH借金カウンター</h1>
 
-    <div id="totalDisplay">読み込み中...</div>
+    <div id="totalDisplay">
+        <span class="total-label">ZJHが俺にしている借金は</span>
+        <span class="total-amount" id="amountSpan">読み込み中...</span>
+    </div>
 
-    <div id="settingsPanel" class="panel">
-        <h2>設定</h2>
-        <button onclick="toggleHistory()">内訳確認</button>
-        <button onclick="toggleAdmin()">管理者モード</button>
+    <div class="button-group">
+        <button class="btn-secondary" onclick="toggleHistory()">内訳確認</button>
+        <button class="btn-secondary" onclick="toggleAdmin()">管理者モード</button>
     </div>
 
     <div id="historyPanel" class="panel">
-        <h2>内訳</h2>
+        <h2>内訳一覧</h2>
         <div class="history-container">
             <table>
                 <thead>
@@ -169,21 +314,22 @@ th {
 
     <div id="adminPanel" class="panel">
         <h2>管理者ログイン</h2>
-        <input type="password" id="adminPassword" placeholder="パスワード">
+        <input type="password" id="adminPassword" placeholder="パスワードを入力してください">
         <button onclick="loginAdmin()">ログイン</button>
 
         <div id="adminControls">
-            <h2>借金追加</h2>
+            <h2>借金データの追加</h2>
+            <label style="color:var(--text-muted);">日付</label>
             <input type="date" id="dateInput">
-            <input type="number" id="amountInput" placeholder="金額">
-            <input type="text" id="reasonInput" placeholder="用途">
-            <button onclick="addDebt()">保存</button>
+            <label style="color:var(--text-muted);">金額 (円)</label>
+            <input type="number" id="amountInput" placeholder="例: 5000">
+            <label style="color:var(--text-muted);">用途</label>
+            <input type="text" id="reasonInput" placeholder="例: 居酒屋の代わり、ゲーム代">
+            <button onclick="addDebt()" style="width: 100%;">この内容で保存する</button>
         </div>
     </div>
 
 </div>
-
-<button class="gear" onclick="toggleSettings()">⚙️</button>
 
 <script>
 // --- configuration ---
@@ -191,27 +337,20 @@ const CONFIG_URL = "https://cjbwqutwvymejgsdnjzf.supabase.co";
 const CONFIG_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqYndxdXR3dnltZWpnc2RuanpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3OTgyMjIsImV4cCI6MjA5NjM3NDIyMn0.C20QTlycDBvgfMjwAGaPQ1VLhlPj0iGA3C3xYi463bs";
 const ADMIN_PASSWORD = "zjhkanekaesanai";
 
-// 競合回避のため独自変数名に変更
 let supabaseClient = null;
+let isAdminLoggedIn = false; // 管理者ログイン状態を追跡
 
 try {
     if (window.supabase && window.supabase.createClient) {
         supabaseClient = window.supabase.createClient(CONFIG_URL, CONFIG_KEY);
     } else {
-        document.getElementById("totalDisplay").innerText = "ライブラリ読み込み失敗";
+        document.getElementById("amountSpan").innerText = "エラー";
     }
 } catch (e) {
     console.error("Supabase初期化エラー:", e);
 }
 
-// パネルトグル処理
-function toggleSettings(){
-    const panel = document.getElementById("settingsPanel");
-    if(!panel) return;
-    const isBlock = window.getComputedStyle(panel).display === "block";
-    panel.style.display = isBlock ? "none" : "block";
-}
-
+// パネル表示トグル
 function toggleHistory(){
     const panel = document.getElementById("historyPanel");
     if(!panel) return;
@@ -232,14 +371,16 @@ function toggleAdmin(){
 function loginAdmin(){
     const pass = document.getElementById("adminPassword").value;
     if(pass === ADMIN_PASSWORD){
+        isAdminLoggedIn = true;
         document.getElementById("adminControls").style.display = "block";
-        alert("ログイン成功");
+        alert("管理者としてログインしました");
+        loadHistory(); // 削除ボタンを表示させるために履歴をリロード
     }else{
         alert("パスワードが違います");
     }
 }
 
-// データ取得
+// データ取得・表示
 async function loadTotal(){
     if (!supabaseClient) return;
     try {
@@ -251,17 +392,17 @@ async function loadTotal(){
 
         if(error){
             console.error(error);
-            document.getElementById("totalDisplay").innerText = "取得エラー";
+            document.getElementById("amountSpan").innerText = "エラー";
             return;
         }
 
         if (!data) {
-            document.getElementById("totalDisplay").innerHTML = "データ未作成<br><small style='font-size:14px;color:#aaa;'>Supabaseのdebtテーブルに id:1, total:0 の行を追加してください</small>";
+            document.getElementById("amountSpan").style.fontSize = "16px";
+            document.getElementById("amountSpan").innerHTML = "データ未作成<br><small style='color:#aaa;'>Supabaseのdebtテーブルに id:1, total:0 の行を追加してください</small>";
             return;
         }
 
-        document.getElementById("totalDisplay").innerHTML = 
-            `ZJHが俺にしている借金は<br>${Number(data.total).toLocaleString()}円`;
+        document.getElementById("amountSpan").innerText = `${Number(data.total).toLocaleString()}円`;
     } catch (e) {
         console.error(e);
     }
@@ -282,6 +423,11 @@ async function loadHistory(){
 
         let html = "";
         for(const row of data){
+            // 管理者ログイン時のみ「削除」ボタンを表示
+            const deleteButton = isAdminLoggedIn 
+                ? `<button class="btn-danger" style="padding:6px 12px; font-size:13px; margin-left:5px;" onclick="deleteDebt('${row.id}', ${row.amount}, ${row.is_paid})">削除</button>` 
+                : '';
+
             html += `
             <tr>
                 <td>${row.date}</td>
@@ -291,7 +437,8 @@ async function loadHistory(){
                     ${row.is_paid ? '<span class="status-paid">返済済み</span>' : '<span class="status-unpaid">未返済</span>'}
                 </td>
                 <td>
-                    ${!row.is_paid ? `<button onclick="markPaid('${row.id}', ${row.amount})">返済済みにする</button>` : '-'}
+                    ${!row.is_paid ? `<button style="padding:6px 12px; font-size:13px;" onclick="markPaid('${row.id}', ${row.amount})">返済済みにする</button>` : '-'}
+                    ${deleteButton}
                 </td>
             </tr>`;
         }
@@ -301,6 +448,7 @@ async function loadHistory(){
     }
 }
 
+// 借金追加
 async function addDebt(){
     if (!supabaseClient) return;
     const date = document.getElementById("dateInput").value;
@@ -308,7 +456,7 @@ async function addDebt(){
     const reason = document.getElementById("reasonInput").value;
 
     if(!date || !amount || !reason){
-        alert("全項目入力してください");
+        alert("すべての項目を入力してください");
         return;
     }
 
@@ -329,12 +477,13 @@ async function addDebt(){
 
     await loadTotal();
     await loadHistory();
-    alert("保存完了");
+    alert("データを追加しました");
 }
 
+// 返済完了処理
 async function markPaid(historyId, amount){
     if (!supabaseClient) return;
-    if(!confirm("返済済みにしますか？")) return;
+    if(!confirm("この項目を返済済みにしますか？")) return;
 
     await supabaseClient.from("history").update({ is_paid: true }).eq("id", historyId);
     const { data: debtRow } = await supabaseClient.from("debt").select("total").eq("id", 1).single();
@@ -346,6 +495,36 @@ async function markPaid(historyId, amount){
 
     await loadTotal();
     await loadHistory();
+}
+
+// 削除処理 (管理者用)
+async function deleteDebt(historyId, amount, isPaid){
+    if (!supabaseClient) return;
+    if (!confirm("本当にこのデータを完全に削除しますか？\n(未返済データの場合、総額からも差し引かれます)")) return;
+
+    // 1. 履歴から削除
+    const { error: deleteError } = await supabaseClient
+        .from("history")
+        .delete()
+        .eq("id", historyId);
+
+    if (deleteError) {
+        alert("削除に失敗しました: " + deleteError.message);
+        return;
+    }
+
+    // 2. もし消したデータが「未返済」だった場合、総額からその金額を引く
+    if (!isPaid) {
+        const { data: debtRow } = await supabaseClient.from("debt").select("total").eq("id", 1).single();
+        await supabaseClient
+            .from("debt")
+            .update({ total: Math.max(0, Number(debtRow.total) - Number(amount)) })
+            .eq("id", 1);
+    }
+
+    await loadTotal();
+    await loadHistory();
+    alert("データを削除しました");
 }
 
 // エントリーポイント
