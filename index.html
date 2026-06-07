@@ -272,11 +272,12 @@ tr:last-child {
     justify-content: center;
 }
 
-/* 🌟 トースト通知：端末画面の最上部固定（他の全要素・スクロールから100%独立） 🌟 */
+/* 🌟 トースト通知：物理的な画面に対して完全固定 🌟 */
 .toast-container {
+    /* position: fixed を指定し、かつ top 制御を行うことで、ページのスクロール量に依存せず */
+    /* 常に「いま目に見えている端末画面の上からXXミリ・XXピクセル」の位置に独立して居座らせます */
     position: fixed;
-    /* アニメーションの挙動を安定させるため、画面上端からの絶対値で制御 */
-    top: -100px; 
+    top: -100px; /* 通常時は画面の外側（見えない場所）に配置 */
     left: 50%;
     transform: translateX(-50%); 
     background: #2e3846;
@@ -286,16 +287,21 @@ tr:last-child {
     font-size: 16px;          
     font-weight: 700;          
     box-shadow: 0 12px 35px rgba(0, 0, 0, 0.5);
-    z-index: 200000 !important; /* モーダルすらも超える絶対的最前面 */
+    
+    /* ページ内の他の要素（スクロールコンテナやz-index競合）に絶対に巻き込まれないように最高値を指定 */
+    z-index: 2147483647 !important; 
+    
     opacity: 0;
     pointer-events: none;
+    /* transitionで、画面上端からの絶対的な距離（topプロパティ）をアニメーション化 */
     transition: top 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
     border: 2px solid #475569; 
     text-align: center;
     min-width: 280px;
     max-width: 90%; 
 }
-/* アクティブ時：画面の最上部（20pxの位置）に完全に固定 */
+
+/* アクティブ時：どんなにサイトを下にスクロールしていても、物理画面の上から20pxの位置にピタッと出現 */
 .toast-container.active {
     top: 20px;
     opacity: 1;
@@ -390,8 +396,9 @@ tr:last-child {
         padding: 14px 24px;
         min-width: auto;
     }
+    /* スマホ画面でも、上から15pxの「画面固定位置」に正確に出現 */
     .toast-container.active {
-        top: 15px; /* スマホ時は画面最上部15pxの位置に固定 */
+        top: 15px; 
     }
 }
 </style>
@@ -462,7 +469,7 @@ tr:last-child {
 </div>
 
 <script>
-// 🌟 ブラウザ固有の「前回のスクロール位置を自動復元する機能」を強制無効化 🌟
+// ブラウザ固有の「前回のスクロール位置を自動復元する機能」を強制無効化
 if ('scrollRestoration' in history) {
     history.scrollRestoration = 'manual';
 }
@@ -477,11 +484,9 @@ function resetPageOnLoad() {
     if (adminPanel) adminPanel.style.display = "none";
 }
 
-// ページのロード、およびコンポーネントが完全に描画されたタイミングで確実に実行
 window.addEventListener('beforeunload', resetPageOnLoad);
 window.addEventListener('load', () => {
     resetPageOnLoad();
-    // 処理の取りこぼしを防ぐためのバックアップ実行
     setTimeout(resetPageOnLoad, 0);
 });
 
