@@ -81,7 +81,7 @@ h2 {
     word-break: break-all;
 }
 
-/* ボタン共通設定（はみ出し防止） */
+/* ボタン共通設定 */
 button{
     border: none;
     border-radius: 12px;
@@ -124,26 +124,13 @@ button.btn-danger:hover {
     gap: 12px;
     justify-content: center;
     margin-bottom: 20px;
-    flex-wrap: wrap; /* 画面幅が狭いときに自動で折り返す */
+    flex-wrap: wrap; 
 }
 
-.panel{
-    background: var(--panel-bg);
-    border-radius: 20px;
-    padding: 30px;
-    margin-top: 20px;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
-    display: none;
-    animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
+/* 枠線の飛び出しを防ぐ入力欄設定 */
 input, select{
     width: 100%;
+    max-width: 100%;
     padding: 14px;
     margin: 10px 0 20px 0;
     border: 2px solid #38414f;
@@ -152,6 +139,13 @@ input, select{
     background: #1a1e24;
     color: #fff;
     transition: border-color 0.2s;
+    display: block;
+}
+
+/* 日付入力欄特有のはみ出しを完全に殺すためのリセット */
+input[type="date"] {
+    appearance: none;
+    -webkit-appearance: none;
 }
 
 input:focus {
@@ -209,7 +203,7 @@ tr:last-child {
     font-weight: 600;
 }
 
-/* 操作ボタンのコンテナ（横並びと折り返し） */
+/* 操作ボタンのコンテナ（PC・タブレット用） */
 .action-buttons-wrap {
     display: flex;
     gap: 8px;
@@ -263,7 +257,7 @@ tr:last-child {
     justify-content: center;
 }
 
-/* トースト通知 (スクロールしても常に「画面」の最上部に固定) */
+/* トースト通知 */
 .toast-container {
     position: fixed;
     top: 25px;                
@@ -289,13 +283,12 @@ tr:last-child {
     opacity: 1;
 }
 
-/* スマートフォン向けの完全レスポンシブ調整 (崩れ対策) */
+/* スマートフォン向けの完全レスポンシブ調整 */
 @media(max-width: 650px) {
     body { padding: 12px; }
     .container { margin: 10px auto; }
     .panel { padding: 20px; }
     
-    /* テーブルをスマートフォンのカード型UIに完全変換 */
     table, thead, tbody, th, td, tr { 
         display: block; 
     }
@@ -314,8 +307,8 @@ tr:last-child {
     td { 
         border: none;
         position: relative;
-        padding-left: 35%; /* 左側のラベル用スペース */
-        text-align: right;  /* 値は右寄せ */
+        padding-left: 30%; 
+        text-align: right;  
         padding-top: 12px;
         padding-bottom: 12px;
         border-bottom: 1px solid #252b35;
@@ -324,14 +317,14 @@ tr:last-child {
     }
     td:last-child {
         border-bottom: none;
+        padding-bottom: 4px;
     }
-    /* 左側に固定する見出しテキストのスタイルと位置決め */
     td:before { 
         position: absolute;
         top: 50%;
         left: 12px;
         transform: translateY(-50%);
-        width: 30%; 
+        width: 25%; 
         white-space: nowrap;
         text-align: left;
         font-weight: 600;
@@ -343,25 +336,28 @@ tr:last-child {
     td:nth-of-type(4):before { content: "状態"; }
     td:nth-of-type(5):before { content: "操作"; }
     
-    /* スマホ時の操作ボタンレイアウト */
+    /* スマホ時の操作ボタンのズレ・違和感を解消するリセット */
     td .action-buttons-wrap {
-        justify-content: flex-end; /* 右寄せ */
+        display: flex;
+        flex-direction: column; /* ズレを防ぐため、スマホでは2つのボタンを綺麗に縦並びにする */
         width: 100%;
+        gap: 8px;
+        margin-top: 4px;
     }
     td button {
-        width: 100%; /* スマホではボタンを横いっぱいに広げて押しやすく */
-        margin-bottom: 4px;
-    }
-    td button:last-child {
-        margin-bottom: 0;
+        width: 100%; 
+        margin: 0;
+        padding: 10px; /* スマホで押しやすい丁度いいサイズ */
+        font-size: 14px;
+        justify-content: center;
     }
     
     .button-group button {
-        width: 100%; /* トップのメインボタンもスマホでは全幅に */
+        width: 100%; 
     }
 
     .modal-buttons {
-        flex-direction: column-reverse; /* スマホではキャンセルを下に */
+        flex-direction: column-reverse; 
     }
     .modal-buttons button {
         width: 100%;
@@ -592,11 +588,10 @@ async function loadHistory(){
 
             if (isAdminLoggedIn) {
                 const payButton = !row.is_paid 
-                    ? `<button style="padding:6px 12px; font-size:13px;" onclick="markPaid('${row.id}', ${row.amount})">返済済みにする</button>` 
+                    ? `<button class="btn-success" style="background:var(--success-color);" onclick="markPaid('${row.id}', ${row.amount})">返済済みにする</button>` 
                     : '';
-                const deleteButton = `<button class="btn-danger" style="padding:6px 12px; font-size:13px;" onclick="deleteDebt('${row.id}', ${row.amount}, ${row.is_paid})">削除</button>`;
+                const deleteButton = `<button class="btn-danger" onclick="deleteDebt('${row.id}', ${row.amount}, ${row.is_paid})">削除</button>`;
                 
-                // 横並びが崩れないようラッパーを噛ませる
                 actionTdContent = `<div class="action-buttons-wrap">${payButton} ${deleteButton}</div>`;
             }
 
