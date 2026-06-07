@@ -207,7 +207,7 @@ tr:last-child {
     font-weight: 600;
 }
 
-/* 自作カスタムダイアログ(モーダル)のCSS */
+/* 自作カスタム確認ダイアログ(モーダル) */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -252,6 +252,29 @@ tr:last-child {
     display: flex;
     gap: 12px;
     justify-content: center;
+}
+
+/* トースト通知 (画面上部にふわっと出るお知らせ) */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    background: #2e3846;
+    color: #fff;
+    padding: 14px 28px;
+    border-radius: 50px;
+    font-weight: 500;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    z-index: 10000;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border: 1px solid #475569;
+}
+.toast-container.active {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
 }
 
 /* モバイル向けカードUI変換 (スマホ表示) */
@@ -368,13 +391,15 @@ tr:last-child {
 
 <div id="customModal" class="modal-overlay">
     <div class="modal-box">
-        <div id="modalText" class="modal-text">ここにメッセージが入ります</div>
+        <div id="modalText" class="modal-text"></div>
         <div class="modal-buttons">
             <button id="modalCancelBtn" class="btn-secondary">キャンセル</button>
             <button id="modalConfirmBtn">確定</button>
         </div>
     </div>
 </div>
+
+<div id="toast" class="toast-container"></div>
 
 <script>
 // --- configuration ---
@@ -395,7 +420,7 @@ try {
     console.error("Supabase初期化エラー:", e);
 }
 
-// ブラウザの仕様によるチェックボックスを完全排除する自作ダイアログ関数
+// 邪魔なチェックボックスを出さない自作確認画面
 function showCustomConfirm(message, isDangerAction = false) {
     return new Promise((resolve) => {
         const modal = document.getElementById("customModal");
@@ -404,14 +429,7 @@ function showCustomConfirm(message, isDangerAction = false) {
         const cancelBtn = document.getElementById("modalCancelBtn");
 
         textZone.innerText = message;
-
-        // 削除などの危険な操作のときは確定ボタンを赤くする
-        if (isDangerAction) {
-            confirmBtn.className = "btn-danger";
-        } else {
-            confirmBtn.className = "";
-        }
-
+        confirmBtn.className = isDangerAction ? "btn-danger" : "";
         modal.classList.add("active");
 
         const cleanup = (result) => {
@@ -424,6 +442,26 @@ function showCustomConfirm(message, isDangerAction = false) {
         confirmBtn.onclick = () => cleanup(true);
         cancelBtn.onclick = () => cleanup(false);
     });
+}
+
+// ブラウザのalertを使わずに自動で消えるメッセージ通知
+function showToast(message, type = "success") {
+    const toast = document.getElementById("toast");
+    toast.innerText = message;
+    
+    if(type === "error") {
+        toast.style.borderColor = "var(--danger-color)";
+        toast.style.color = "var(--danger-color)";
+    } else {
+        toast.style.borderColor = "var(--success-color)";
+        toast.style.color = "var(--success-color)";
+    }
+
+    toast.classList.add("active");
+
+    setTimeout(() => {
+        toast.classList.remove("active");
+    }, 2500); // 2.5秒後に自動消去
 }
 
 // パネル表示トグル
@@ -449,10 +487,10 @@ function loginAdmin(){
     if(pass === ADMIN_PASSWORD){
         isAdminLoggedIn = true;
         document.getElementById("adminControls").style.display = "block";
-        alert("管理者としてログインしました");
+        showToast("管理者としてログインしました");
         loadHistory(); 
     }else{
-        alert("パスワードが違います");
+        showToast("パスワードが違います", "error");
     }
 }
 
@@ -533,7 +571,7 @@ async function loadHistory(){
 async function addDebt(){
     if (!supabaseClient) return;
     if (!isAdminLoggedIn) {
-        alert("権限がありません");
+        showToast("権限がありません", "error");
         return;
     }
     const date = document.getElementById("dateInput").value;
@@ -541,7 +579,7 @@ async function addDebt(){
     const reason = document.getElementById("reasonInput").value;
 
     if(!date || !amount || !reason){
-        alert("すべての項目を入力してください");
+        showToast("すべての項目を入力してください", "error");
         return;
     }
 
@@ -550,7 +588,7 @@ async function addDebt(){
         .insert([{ date, amount, reason, is_paid: false }]);
 
     if(insertError){
-        alert("追加失敗: " + insertError.message);
+        showToast("追加失敗: " + insertError.message, "error");
         return;
     }
 
@@ -562,18 +600,17 @@ async function addDebt(){
 
     await loadTotal();
     await loadHistory();
-    alert("データを追加しました");
+    showToast("データを追加しました");
 }
 
 // 返済完了処理
 async function markPaid(historyId, amount){
     if (!supabaseClient) return;
     if (!isAdminLoggedIn) {
-        alert("権限がありません");
+        showToast("権限がありません", "error");
         return;
     }
     
-    // 自作ダイアログを呼び出し
     const confirmed = await showCustomConfirm("この項目を返済済みにしますか？", false);
     if(!confirmed) return;
 
@@ -587,17 +624,17 @@ async function markPaid(historyId, amount){
 
     await loadTotal();
     await loadHistory();
+    showToast("返済済みに更新しました");
 }
 
 // 削除処理 (管理者用)
 async function deleteDebt(historyId, amount, isPaid){
     if (!supabaseClient) return;
     if (!isAdminLoggedIn) {
-        alert("権限がありません");
+        showToast("権限がありません", "error");
         return;
     }
 
-    // 自作ダイアログを呼び出し(削除なので第二引数を true にしてボタンを赤くする)
     const confirmed = await showCustomConfirm("本当にこのデータを完全に削除しますか？\n（※未返済データの場合、総額からも差し引かれます）", true);
     if (!confirmed) return;
 
@@ -607,7 +644,7 @@ async function deleteDebt(historyId, amount, isPaid){
         .eq("id", historyId);
 
     if (deleteError) {
-        alert("削除に失敗しました: " + deleteError.message);
+        showToast("削除に失敗しました: " + deleteError.message, "error");
         return;
     }
 
@@ -621,7 +658,7 @@ async function deleteDebt(historyId, amount, isPaid){
 
     await loadTotal();
     await loadHistory();
-    alert("データを削除しました");
+    showToast("データを削除しました");
 }
 
 // エントリーポイント
