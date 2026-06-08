@@ -555,6 +555,7 @@ body.is-admin .admin-only {
 </div>
 
 <script>
+// 🌐 多言語テキストデータ定義 (ネイティブUI表現に最適化)
 const i18n = {
     ja: {
         title: "ZJH借金カウンター", totalLabel: "ZJHが私にしている借金は", loading: "読み込み中...", error: "エラー",
@@ -623,16 +624,17 @@ const i18n = {
         lblType: "Art", debt: "Verliehen", repay: "Zurückgezahlt", required: "*Erforderlich", amountYen: "Betrag (Yen)", placeholderAmount: "z.B. 5000",
         reasonRequired: "*Erforderlich beim Verleihen", placeholderReason: "z.B. Mittagessen, Ticket", save: "Speichern",
         cancel: "Abbrechen", confirm: "Bestätigen", yen: " ¥", delete: "Löschen",
-        toastLogin: "Erfolgreich einggeloggt", toastWrongPass: "Falsches Passwort", toastNoAuth: "Zugriff verweigert",
+        toastLogin: "Erfolgreich eingeloggt", toastWrongPass: "Falsches Passwort", toastNoAuth: "Zugriff verweigert",
         toastInputDate: "Bitte ein Datum auswählen.", toastInputAmount: "Bitte einen gültigen Betrag eingeben.", toastInputReason: "Bitte einen Zweck angeben.",
         toastAdded: "Eintrag gespeichert.", toastAddFailed: "Fehler beim Speichern: ", toastDeleted: "Eintrag gelöscht.", toastDeleteFailed: "Fehler beim Löschen: ",
         confirmDelete: "Möchten Sie diesen Eintrag wirklich löschen?\n(Der Gesamtsaldo wird automatisch neu berechnet.)"
     }
 };
 
+// 🌐 選択言語をローカルストレージから読み込み（デフォルトは日本語 'ja'）
 let currentLang = localStorage.getItem('selectedLang') || 'ja';
-let sessionAdminPassword = ""; // 🔐 DB検証用にセッションメモリへ保持
 
+// 🌐 DOMのテキストを現在の言語へ一括更新する関数
 function updateLanguageDOM() {
     const t = i18n[currentLang];
     
@@ -673,6 +675,7 @@ function updateLanguageDOM() {
     document.getElementById("modalCancelBtn").innerText = t.cancel;
     document.getElementById("modalConfirmBtn").innerText = t.confirm;
 
+    // レスポンシブ用CSS変数の更新
     document.documentElement.style.setProperty('--i18n-date', `"${t.thDate}"`);
     document.documentElement.style.setProperty('--i18n-amount', `"${t.thAmount}"`);
     document.documentElement.style.setProperty('--i18n-reason', `"${t.thReason}"`);
@@ -694,6 +697,7 @@ function changeLanguage(lang) {
     loadHistory(); 
 }
 
+// メニュー外クリックで閉じる
 window.addEventListener('click', () => {
     document.getElementById("langMenu").classList.remove("show");
 });
@@ -711,7 +715,6 @@ function resetPageOnLoad() {
     if (adminPanel) adminPanel.style.display = "none";
     
     isAdminLoggedIn = false;
-    sessionAdminPassword = "";
     document.body.classList.remove("is-admin");
     updateLanguageDOM(); 
 }
@@ -817,7 +820,6 @@ function toggleAdmin(){
     if(isBlock) {
         panel.style.display = "none";
         isAdminLoggedIn = false;
-        sessionAdminPassword = "";
         document.body.classList.remove("is-admin");
         document.getElementById("adminControls").style.display = "none";
         document.getElementById("adminPassword").value = ""; 
@@ -832,7 +834,6 @@ function loginAdmin(){
     const t = i18n[currentLang];
     if(pass === ADMIN_PASSWORD){
         isAdminLoggedIn = true;
-        sessionAdminPassword = pass; // パスワードを保持
         document.body.classList.add("is-admin"); 
         document.getElementById("adminControls").style.display = "block";
         showToast(t.toastLogin);
@@ -911,7 +912,6 @@ async function loadHistory(){
     }
 }
 
-/* 🔐 RPC（SQL関数）を利用した安全な追加処理にアップデート */
 async function addTransaction(){
     if (!supabaseClient) return;
     const t = i18n[currentLang];
@@ -940,18 +940,17 @@ async function addTransaction(){
 
     const finalAmount = type === "debt" ? rawAmount : -rawAmount;
 
-    // 作成した PostgreSQL関数 "add_transaction" を呼び出す
-    const { error: rpcError } = await supabaseClient.rpc("add_transaction", {
-        p_password: sessionAdminPassword,
-        p_date: date,
-        p_amount: finalAmount,
-        p_reason: reason
-    });
+    const { error: insertError } = await supabaseClient
+        .from("history")
+        .insert([{ date, amount: finalAmount, reason }]);
 
-    if(rpcError){
-        showToast(t.toastAddFailed + rpcError.message, "error");
+    if(insertError){
+        showToast(t.toastAddFailed + insertError.message, "error");
         return;
     }
+
+    const { data: debtRow } = await supabaseClient.from("debt").select("total").eq("id", 1).single();
+    await supabaseClient.from("debt").update({ total: Number(debtRow.total) + finalAmount }).eq("id", 1);
 
     document.getElementById("amountInput").value = "";
     document.getElementById("reasonInput").value = "";
@@ -966,7 +965,6 @@ async function addTransaction(){
     showToast(t.toastAdded);
 }
 
-/* 🔐 RPC（SQL関数）を利用した安全な削除処理にアップデート */
 async function deleteTransaction(historyId, amount){
     if (!supabaseClient) return;
     const t = i18n[currentLang];
@@ -978,17 +976,21 @@ async function deleteTransaction(historyId, amount){
     const confirmed = await showCustomConfirm(t.confirmDelete, true);
     if (!confirmed) return;
 
-    // 作成した PostgreSQL関数 "delete_transaction" を呼び出す
-    const { error: rpcError } = await supabaseClient.rpc("delete_transaction", {
-        p_password: sessionAdminPassword,
-        p_id: Number(historyId),
-        p_amount: Number(amount)
-    });
+    const { error: deleteError } = await supabaseClient
+        .from("history")
+        .delete()
+        .eq("id", historyId);
 
-    if (rpcError) {
-        showToast(t.toastDeleteFailed + rpcError.message, "error");
+    if (deleteError) {
+        showToast(t.toastDeleteFailed + deleteError.message, "error");
         return;
     }
+
+    const { data: debtRow } = await supabaseClient.from("debt").select("total").eq("id", 1).single();
+    await supabaseClient
+        .from("debt")
+        .update({ total: Number(debtRow.total) - Number(amount) })
+        .eq("id", 1);
 
     await loadTotal();
     await loadHistory();
