@@ -743,6 +743,7 @@ document.getElementById('typeInput').addEventListener('change', updateReasonLabe
 // --- configuration ---
 const CONFIG_URL = "https://cjbwqutwvymejgsdnjzf.supabase.co";
 const CONFIG_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqYndxdXR3dnltZWpnc2RuanpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3OTgyMjIsImV4cCI6MjA5NjM3NDIyMn0.C20QTlycDBvgfMjwAGaPQ1VLhlPj0iGA3C3xYi463bs";
+const ADMIN_PASSWORD = "zjhkanekaesanai";
 
 let supabaseClient = null;
 let isAdminLoggedIn = false; 
@@ -828,11 +829,10 @@ function toggleAdmin(){
     }
 }
 
-async function loginAdmin(){
+function loginAdmin(){
     const pass = document.getElementById("adminPassword").value;
     const t = i18n[currentLang];
-    
-    if(pass.trim() !== ""){
+    if(pass === ADMIN_PASSWORD){
         isAdminLoggedIn = true;
         document.body.classList.add("is-admin"); 
         document.getElementById("adminControls").style.display = "block";
@@ -924,7 +924,6 @@ async function addTransaction(){
     const date = document.getElementById("dateInput").value;
     const rawAmount = Number(document.getElementById("amountInput").value);
     const reason = document.getElementById("reasonInput").value;
-    const pass = document.getElementById("adminPassword").value;
 
     if (!date) {
         showToast(t.toastInputDate, "error");
@@ -941,21 +940,17 @@ async function addTransaction(){
 
     const finalAmount = type === "debt" ? rawAmount : -rawAmount;
 
-    const { error: rpcError } = await supabaseClient.rpc('add_transaction_secure', {
-        input_password: pass,
-        t_date: date,
-        t_amount: finalAmount,
-        t_reason: reason
-    });
+    const { error: insertError } = await supabaseClient
+        .from("history")
+        .insert([{ date, amount: finalAmount, reason }]);
 
-    if(rpcError){
-        if (rpcError.message.includes("AUTHENTICATION_FAILED")) {
-            showToast(t.toastWrongPass, "error");
-        } else {
-            showToast(rpcError.message, "error");
-        }
+    if(insertError){
+        showToast(t.toastAddFailed + insertError.message, "error");
         return;
     }
+
+    const { data: debtRow } = await supabaseClient.from("debt").select("total").eq("id", 1).single();
+    await supabaseClient.from("debt").update({ total: Number(debtRow.total) + finalAmount }).eq("id", 1);
 
     document.getElementById("amountInput").value = "";
     document.getElementById("reasonInput").value = "";
@@ -981,23 +976,21 @@ async function deleteTransaction(historyId, amount){
     const confirmed = await showCustomConfirm(t.confirmDelete, true);
     if (!confirmed) return;
 
-    const pass = document.getElementById("adminPassword").value;
+    const { error: deleteError } = await supabaseClient
+        .from("history")
+        .delete()
+        .eq("id", historyId);
 
-    const { error: rpcError } = await supabaseClient.rpc('delete_transaction_secure', {
-        input_password: pass,
-        history_id: Number(historyId), // 確実に数値型に変換してRPCへ送信
-        t_amount: Number(amount)
-    });
-
-    if (rpcError) {
-        if (rpcError.message.includes("AUTHENTICATION_FAILED")) {
-            showToast(t.toastWrongPass, "error");
-        } else {
-            // パスワード以外の内部システムエラー（型エラーなど）が発生した場合は、原因をそのままトースト表示
-            showToast("削除エラー: " + rpcError.message, "error");
-        }
+    if (deleteError) {
+        showToast(t.toastDeleteFailed + deleteError.message, "error");
         return;
     }
+
+    const { data: debtRow } = await supabaseClient.from("debt").select("total").eq("id", 1).single();
+    await supabaseClient
+        .from("debt")
+        .update({ total: Number(debtRow.total) - Number(amount) })
+        .eq("id", 1);
 
     await loadTotal();
     await loadHistory();
