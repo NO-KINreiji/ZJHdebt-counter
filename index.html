@@ -148,7 +148,7 @@ input[type="date"] {
     -webkit-appearance: none;
 }
 
-input:focus {
+input:focus, select:focus {
     outline: none;
     border-color: var(--accent-color);
 }
@@ -209,13 +209,13 @@ tr:last-child {
     border-bottom: none;
 }
 
-.status-paid{
-    color: var(--success-color);
+.amount-debt {
+    color: var(--danger-color);
     font-weight: 600;
 }
 
-.status-unpaid{
-    color: var(--danger-color);
+.amount-repay {
+    color: var(--success-color);
     font-weight: 600;
 }
 
@@ -272,11 +272,10 @@ tr:last-child {
     justify-content: center;
 }
 
-/* トースト通知だから物理的な画面に対して完全固定 */
+/* 🌟 トースト通知：物理的な画面に対して完全固定 🌟 */
 .toast-container {
-    /* position: fixedを指定し、かつtop制御を行うことで、ページのスクロール量に依存せず居座るという脳筋戦法 */
     position: fixed;
-    top: -100px; /* 通常時は画面の外側（見えない場所）に配置 */
+    top: -100px; 
     left: 50%;
     transform: translateX(-50%); 
     background: #2e3846;
@@ -286,13 +285,9 @@ tr:last-child {
     font-size: 16px;          
     font-weight: 700;          
     box-shadow: 0 12px 35px rgba(0, 0, 0, 0.5);
-    
-    /* ページ内の他の要素に巻き込まれないように最高値を指定 */
     z-index: 2147483647 !important; 
-    
     opacity: 0;
     pointer-events: none;
-    /* transitionで、画面上端からの絶対的な距離（topプロパティ）をアニメーション化 */
     transition: top 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
     border: 2px solid #475569; 
     text-align: center;
@@ -300,13 +295,12 @@ tr:last-child {
     max-width: 90%; 
 }
 
-/* アクティブ時はどんなにサイトを下にスクロールしていても、物理画面の上から20pxの位置に出現 */
 .toast-container.active {
     top: 20px;
     opacity: 1;
-} 
+}
 
-/* スマートフォン向け調整めんどい*/
+/* スマートフォン向けの完全レスポンシブ調整 */
 @media(max-width: 650px) {
     body { padding: 16px 12px; }
     .container { margin: 10px auto; }
@@ -358,10 +352,11 @@ tr:last-child {
         font-weight: 600;
         color: var(--text-muted);
     }
+    /* カラム名変更に合わせたレスポンシブ対応 */
     td:nth-of-type(1):before { content: "日付"; }
-    td:nth-of-type(2):before { content: "金額"; }
-    td:nth-of-type(3):before { content: "用途"; }
-    td:nth-of-type(4):before { content: "状態"; }
+    td:nth-of-type(2):before { content: "収支"; }
+    td:nth-of-type(3):before { content: "残高"; }
+    td:nth-of-type(4):before { content: "用途"; }
     td:nth-of-type(5):before { content: "操作"; }
     
     td .action-buttons-wrap {
@@ -395,7 +390,6 @@ tr:last-child {
         padding: 14px 24px;
         min-width: auto;
     }
-    /* スマホ画面でも、上から15pxの「画面固定位置」に正確に出現 */
     .toast-container.active {
         top: 15px; 
     }
@@ -411,7 +405,7 @@ tr:last-child {
     <h1>ZJH借金カウンター</h1>
 
     <div id="totalDisplay">
-        <span class="total-label">ZJHが私にしている借金は</span>
+        <span class="total-label">現在の全体の収支は</span>
         <span class="total-amount" id="amountSpan">読み込み中...</span>
     </div>
 
@@ -421,15 +415,15 @@ tr:last-child {
     </div>
 
     <div id="historyPanel" class="panel" style="display: none;">
-        <h2>内訳一覧</h2>
+        <h2>内訳一覧（通帳形式）</h2>
         <div class="history-container">
             <table>
                 <thead>
                     <tr>
                         <th>日付</th>
-                        <th>金額</th>
+                        <th>収支</th>
+                        <th>残高</th>
                         <th>用途</th>
-                        <th>状態</th>
                         <th>操作</th>
                     </tr>
                 </thead>
@@ -444,14 +438,24 @@ tr:last-child {
         <button onclick="loginAdmin()">ログイン</button>
 
         <div id="adminControls">
-            <h2>借金データの追加</h2>
-            <label style="color:var(--text-muted);">日付</label>
+            <h2>データ追加</h2>
+            
+            <label style="color:var(--text-muted);">種類</label>
+            <select id="typeInput">
+                <option value="debt">借金 (残高が増える)</option>
+                <option value="repay">返却 (残高が減る)</option>
+            </select>
+
+            <label style="color:var(--text-muted);">日付 <span style="color:var(--danger-color);">*必須</span></label>
             <input type="date" id="dateInput">
-            <label style="color:var(--text-muted);">金額 (円)</label>
-            <input type="number" id="amountInput" placeholder="例: 5000">
-            <label style="color:var(--text-muted);">用途</label>
+            
+            <label style="color:var(--text-muted);">金額 (円) <span style="color:var(--danger-color);">*必須(正の整数)</span></label>
+            <input type="number" id="amountInput" placeholder="例: 5000" min="1">
+            
+            <label style="color:var(--text-muted);">用途 <span id="reasonRequiredLabel" style="color:var(--danger-color);">*借金時は必須</span></label>
             <input type="text" id="reasonInput" placeholder="例: クレーンゲーム代、自転車の駐輪代">
-            <button onclick="addDebt()" style="width: 100%;">この内容で保存する</button>
+            
+            <button onclick="addTransaction()" style="width: 100%;">この内容で保存する</button>
         </div>
     </div>
 
@@ -468,14 +472,12 @@ tr:last-child {
 </div>
 
 <script>
-// ブラウザ固有の「前回のスクロール位置を自動復元する機能」を強制無効化
 if ('scrollRestoration' in history) {
     history.scrollRestoration = 'manual';
 }
 
-// ページ読み込み・リロード時の初期化処理
 function resetPageOnLoad() {
-    window.scrollTo(0, 0); // 必ず一番上にスクロール
+    window.scrollTo(0, 0); 
     
     const historyPanel = document.getElementById("historyPanel");
     const adminPanel = document.getElementById("adminPanel");
@@ -487,6 +489,16 @@ window.addEventListener('beforeunload', resetPageOnLoad);
 window.addEventListener('load', () => {
     resetPageOnLoad();
     setTimeout(resetPageOnLoad, 0);
+});
+
+// 種別によって用途の必須ラベルの表示を切り替える
+document.getElementById('typeInput').addEventListener('change', function(e) {
+    const label = document.getElementById('reasonRequiredLabel');
+    if(e.target.value === 'debt') {
+        label.style.display = 'inline';
+    } else {
+        label.style.display = 'none';
+    }
 });
 
 // --- configuration ---
@@ -507,7 +519,6 @@ try {
     console.error("Supabase初期化エラー:", e);
 }
 
-// 自作確認画面
 function showCustomConfirm(message, isDangerAction = false) {
     return new Promise((resolve) => {
         const modal = document.getElementById("customModal");
@@ -531,7 +542,6 @@ function showCustomConfirm(message, isDangerAction = false) {
     });
 }
 
-// 自動で消えるメッセージ通知超オシャレ
 function showToast(message, type = "success") {
     const toast = document.getElementById("toast");
     toast.innerText = message;
@@ -553,7 +563,6 @@ function showToast(message, type = "success") {
     }, 2500); 
 }
 
-// パネル表示トグル
 function toggleHistory(){
     const panel = document.getElementById("historyPanel");
     if(!panel) return;
@@ -583,7 +592,6 @@ function loginAdmin(){
     }
 }
 
-// データ取得・表示だがなぜ動いているのか謎
 async function loadTotal(){
     if (!supabaseClient) return;
     try {
@@ -614,40 +622,51 @@ async function loadTotal(){
 async function loadHistory(){
     if (!supabaseClient) return;
     try {
+        // 通帳のように残高を計算するため、古い順（昇順）で全データ取得
         const { data, error } = await supabaseClient
             .from("history")
             .select("*")
-            .order("date", { ascending: false });
+            .order("date", { ascending: true })
+            .order("id", { ascending: true });
 
         if(error){
             console.error(error);
             return;
         }
 
+        // JS側でその時点の残高を計算する
+        let currentTotal = 0;
+        const processedData = data.map(row => {
+            currentTotal += Number(row.amount);
+            return {
+                ...row,
+                runningBalance: currentTotal
+            };
+        });
+
+        // 表示時は新しいものが上に来るように配列を反転させる
+        processedData.reverse();
+
         let html = "";
-        for(const row of data){
+        for(const row of processedData){
             let actionTdContent = "-";
 
             if (isAdminLoggedIn) {
-                const payButton = !row.is_paid 
-                    ? `<button class="btn-success" style="background:var(--success-color);" onclick="markPaid('${row.id}', ${row.amount})">返済済みにする</button>` 
-                    : '';
-                const deleteButton = `<button class="btn-danger" onclick="deleteDebt('${row.id}', ${row.amount}, ${row.is_paid})">削除</button>`;
-                
-                actionTdContent = `<div class="action-buttons-wrap">${payButton} ${deleteButton}</div>`;
+                const deleteButton = `<button class="btn-danger" onclick="deleteTransaction('${row.id}', ${row.amount})">削除</button>`;
+                actionTdContent = `<div class="action-buttons-wrap">${deleteButton}</div>`;
             }
+
+            const isDebt = Number(row.amount) > 0;
+            const amountClass = isDebt ? "amount-debt" : "amount-repay";
+            const amountPrefix = isDebt ? "+" : "";
 
             html += `
             <tr>
                 <td>${row.date}</td>
-                <td>${Number(row.amount).toLocaleString()}円</td>
-                <td>${row.reason || ""}</td>
-                <td>
-                    ${row.is_paid ? '<span class="status-paid">返済済み</span>' : '<span class="status-unpaid">未返済</span>'}
-                </td>
-                <td>
-                    ${actionTdContent}
-                </td>
+                <td><span class="${amountClass}">${amountPrefix}${Number(row.amount).toLocaleString()}円</span></td>
+                <td>${Number(row.runningBalance).toLocaleString()}円</td>
+                <td>${row.reason || "-"}</td>
+                <td>${actionTdContent}</td>
             </tr>`;
         }
         document.getElementById("historyBody").innerHTML = html;
@@ -656,25 +675,39 @@ async function loadHistory(){
     }
 }
 
-// 借金追加
-async function addDebt(){
+async function addTransaction(){
     if (!supabaseClient) return;
     if (!isAdminLoggedIn) {
         showToast("権限がありません", "error");
         return;
     }
+
+    const type = document.getElementById("typeInput").value;
     const date = document.getElementById("dateInput").value;
-    const amount = Number(document.getElementById("amountInput").value);
+    const rawAmount = Number(document.getElementById("amountInput").value);
     const reason = document.getElementById("reasonInput").value;
 
-    if(!date || !amount || !reason){
-        showToast("すべての項目を入力してください", "error");
+    // バリデーション
+    if (!date) {
+        showToast("日付を入力してください", "error");
+        return;
+    }
+    if (!rawAmount || rawAmount <= 0) {
+        showToast("金額には正の整数を入力してください", "error");
+        return;
+    }
+    if (type === "debt" && !reason.trim()) {
+        showToast("借金の場合は用途を入力してください", "error");
         return;
     }
 
+    // 返却ならマイナスの値にする
+    const finalAmount = type === "debt" ? rawAmount : -rawAmount;
+
+    // is_paid は除外し、amountに収支を記録
     const { error: insertError } = await supabaseClient
         .from("history")
-        .insert([{ date, amount, reason, is_paid: false }]);
+        .insert([{ date, amount: finalAmount, reason }]);
 
     if(insertError){
         showToast("追加失敗: " + insertError.message, "error");
@@ -682,49 +715,28 @@ async function addDebt(){
     }
 
     const { data: debtRow } = await supabaseClient.from("debt").select("total").eq("id", 1).single();
-    await supabaseClient.from("debt").update({ total: Number(debtRow.total) + amount }).eq("id", 1);
+    await supabaseClient.from("debt").update({ total: Number(debtRow.total) + finalAmount }).eq("id", 1);
 
     document.getElementById("amountInput").value = "";
     document.getElementById("reasonInput").value = "";
+    if(type === "repay") {
+        document.getElementById("typeInput").value = "debt"; // デフォルトに戻す
+        document.getElementById('reasonRequiredLabel').style.display = 'inline';
+    }
 
     await loadTotal();
     await loadHistory();
     showToast("データを追加しました");
 }
 
-// 返済完了処理
-async function markPaid(historyId, amount){
-    if (!supabaseClient) return;
-    if (!isAdminLoggedIn) {
-        showToast("権限がありません", "error");
-        return;
-    }
-    
-    const confirmed = await showCustomConfirm("この項目を返済済みにしますか？", false);
-    if(!confirmed) return;
-
-    await supabaseClient.from("history").update({ is_paid: true }).eq("id", historyId);
-    const { data: debtRow } = await supabaseClient.from("debt").select("total").eq("id", 1).single();
-
-    await supabaseClient
-        .from("debt")
-        .update({ total: Math.max(0, Number(debtRow.total) - Number(amount)) })
-        .eq("id", 1);
-
-    await loadTotal();
-    await loadHistory();
-    showToast("返済済みに更新しました");
-}
-
-// 削除処理 (管理者用)
-async function deleteDebt(historyId, amount, isPaid){
+async function deleteTransaction(historyId, amount){
     if (!supabaseClient) return;
     if (!isAdminLoggedIn) {
         showToast("権限がありません", "error");
         return;
     }
 
-    const confirmed = await showCustomConfirm("本当にこのデータを完全に削除しますか？\n（※未返済データの場合、総額からも差し引かれます）", true);
+    const confirmed = await showCustomConfirm("本当にこのデータを完全に削除しますか？\n（※全体の収支も自動的に再計算されます）", true);
     if (!confirmed) return;
 
     const { error: deleteError } = await supabaseClient
@@ -737,13 +749,13 @@ async function deleteDebt(historyId, amount, isPaid){
         return;
     }
 
-    if (!isPaid) {
-        const { data: debtRow } = await supabaseClient.from("debt").select("total").eq("id", 1).single();
-        await supabaseClient
-            .from("debt")
-            .update({ total: Math.max(0, Number(debtRow.total) - Number(amount)) })
-            .eq("id", 1);
-    }
+    const { data: debtRow } = await supabaseClient.from("debt").select("total").eq("id", 1).single();
+    
+    // 消した金額分を逆算（借金(プラス)を消したらマイナス、返却(マイナス)を消したらプラスになる）
+    await supabaseClient
+        .from("debt")
+        .update({ total: Number(debtRow.total) - Number(amount) })
+        .eq("id", 1);
 
     await loadTotal();
     await loadHistory();
