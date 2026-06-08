@@ -623,7 +623,7 @@ const i18n = {
         adminLogin: "Admin-Login", enterPass: "Passwort eingeben", login: "Einloggen", addData: "Eintrag hinzufügen",
         lblType: "Art", debt: "Verliehen", repay: "Zurückgezahlt", required: "*Erforderlich", amountYen: "Betrag (Yen)", placeholderAmount: "z.B. 5000",
         reasonRequired: "*Erforderlich beim Verleihen", placeholderReason: "z.B. Mittagessen, Ticket", save: "Speichern",
-        cancel: "Abbrechen", confirm: "Best態igen", yen: " ¥", delete: "Löschen",
+        cancel: "Abbrechen", confirm: "Bestätigen", yen: " ¥", delete: "Löschen",
         toastLogin: "Erfolgreich eingeloggt", toastWrongPass: "Falsches Passwort", toastNoAuth: "Zugriff verweigert",
         toastInputDate: "Bitte ein Datum auswählen.", toastInputAmount: "Bitte einen gültigen Betrag eingeben.", toastInputReason: "Bitte einen Zweck angeben.",
         toastAdded: "Eintrag gespeichert.", toastAddFailed: "Fehler beim Speichern: ", toastDeleted: "Eintrag gelöscht.", toastDeleteFailed: "Fehler beim Löschen: ",
@@ -832,7 +832,6 @@ async function loginAdmin(){
     const pass = document.getElementById("adminPassword").value;
     const t = i18n[currentLang];
     
-    // パスワードの検証は仮ログインとして通し、実際のデータベース操作時にRPC側で厳密にチェックします
     if(pass.trim() !== ""){
         isAdminLoggedIn = true;
         document.body.classList.add("is-admin"); 
@@ -942,7 +941,6 @@ async function addTransaction(){
 
     const finalAmount = type === "debt" ? rawAmount : -rawAmount;
 
-    // テーブル直接ではなく、SQLエディタで作成したセキュアな関数を呼び出し
     const { error: rpcError } = await supabaseClient.rpc('add_transaction_secure', {
         input_password: pass,
         t_date: date,
@@ -951,7 +949,11 @@ async function addTransaction(){
     });
 
     if(rpcError){
-        showToast(t.toastWrongPass, "error");
+        if (rpcError.message.includes("AUTHENTICATION_FAILED")) {
+            showToast(t.toastWrongPass, "error");
+        } else {
+            showToast(rpcError.message, "error");
+        }
         return;
     }
 
@@ -981,15 +983,19 @@ async function deleteTransaction(historyId, amount){
 
     const pass = document.getElementById("adminPassword").value;
 
-    // テーブル直接ではなく、SQLエディタで作成したセキュアな関数を呼び出し
     const { error: rpcError } = await supabaseClient.rpc('delete_transaction_secure', {
         input_password: pass,
-        history_id: historyId,
-        t_amount: amount
+        history_id: Number(historyId), // 確実に数値型に変換してRPCへ送信
+        t_amount: Number(amount)
     });
 
     if (rpcError) {
-        showToast(t.toastWrongPass, "error");
+        if (rpcError.message.includes("AUTHENTICATION_FAILED")) {
+            showToast(t.toastWrongPass, "error");
+        } else {
+            // パスワード以外の内部システムエラー（型エラーなど）が発生した場合は、原因をそのままトースト表示
+            showToast("削除エラー: " + rpcError.message, "error");
+        }
         return;
     }
 
