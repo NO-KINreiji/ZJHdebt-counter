@@ -35,6 +35,57 @@ body{
     overflow-x: hidden; 
 }
 
+/* 🌐 言語セレクターの配置設定 */
+.lang-selector {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+}
+.lang-btn {
+    background: var(--panel-bg);
+    border: 1px solid #38414f;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 18px;
+    color: var(--text-color);
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
+}
+.lang-btn:hover {
+    background: #38414f;
+    transform: translateY(-1px);
+}
+.lang-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: var(--panel-bg);
+    border: 1px solid #38414f;
+    border-radius: 12px;
+    margin-top: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    min-width: 130px;
+    overflow: hidden;
+    animation: fadeIn 0.2s ease;
+}
+.lang-menu.show {
+    display: block;
+}
+.lang-item {
+    padding: 12px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-color);
+    transition: background 0.2s;
+    text-align: left;
+}
+.lang-item:hover {
+    background: #38414f;
+}
+
 .container{
     max-width: 800px;
     margin: 40px auto;
@@ -48,6 +99,7 @@ h1{
     margin-bottom: 30px;
     font-weight: 600;
     letter-spacing: 0.05em;
+    padding-right: 50px; /* 地球儀マークとの被り防止 */
 }
 
 h2 {
@@ -225,7 +277,6 @@ tr:last-child {
     flex-wrap: wrap;
 }
 
-/* 🌟 管理者専用の列・要素を制御する設定 🌟 */
 .admin-only {
     display: none !important;
 }
@@ -313,6 +364,15 @@ body.is-admin .admin-only {
     body { padding: 16px 12px; }
     .container { margin: 10px auto; }
     
+    .lang-selector {
+        top: 12px;
+        right: 12px;
+    }
+    .lang-btn {
+        padding: 8px 12px;
+        font-size: 16px;
+    }
+
     .panel { 
         padding: 24px 16px; 
         margin-top: 15px; 
@@ -361,13 +421,12 @@ body.is-admin .admin-only {
         color: var(--text-muted);
     }
     
-    /* 残高列をなくした 4列構成の見出しマッピング */
-    td:nth-of-type(1):before { content: "日付"; }
-    td:nth-of-type(2):before { content: "収支"; }
-    td:nth-of-type(3):before { content: "用途"; }
-    td:nth-of-type(4):before { content: "操作"; }
+    /* 🌐 CSS変数を使ってレスポンシブ時の見出しも多言語化 */
+    td:nth-of-type(1):before { content: var(--i18n-date, "日付"); }
+    td:nth-of-type(2):before { content: var(--i18n-amount, "収支"); }
+    td:nth-of-type(3):before { content: var(--i18n-reason, "用途"); }
+    td:nth-of-type(4):before { content: var(--i18n-action, "操作"); }
     
-    /* スマホ環境かつ管理者ログイン時のみ操作ブロックを表示 */
     body.is-admin .admin-only {
         display: block !important;
     }
@@ -413,30 +472,42 @@ body.is-admin .admin-only {
 
 <div id="toast" class="toast-container"></div>
 
+<div class="lang-selector">
+    <button class="lang-btn" onclick="toggleLangMenu(event)">🌐</button>
+    <div id="langMenu" class="lang-menu">
+        <div class="lang-item" onclick="changeLanguage('ja')">日本語</div>
+        <div class="lang-item" onclick="changeLanguage('en')">English</div>
+        <div class="lang-item" onclick="changeLanguage('zh')">简体中文</div>
+        <div class="lang-item" onclick="changeLanguage('es')">Español</div>
+        <div class="lang-item" onclick="changeLanguage('fr')">Français</div>
+        <div class="lang-item" onclick="changeLanguage('de')">Deutsch</div>
+    </div>
+</div>
+
 <div class="container">
 
-    <h1>ZJH借金カウンター</h1>
+    <h1 id="mainTitle">ZJH借金カウンター</h1>
 
     <div id="totalDisplay">
-        <span class="total-label">ZJHが私にしている借金は</span>
+        <span class="total-label" id="lblTotalDisplay">ZJHが私にしている借金は</span>
         <span class="total-amount" id="amountSpan">読み込み中...</span>
     </div>
 
     <div class="button-group">
-        <button class="btn-secondary" onclick="toggleHistory()">内訳確認</button>
-        <button class="btn-secondary" onclick="toggleAdmin()">管理者モード</button>
+        <button id="btnToggleHistory" class="btn-secondary" onclick="toggleHistory()">内訳確認</button>
+        <button id="btnToggleAdmin" class="btn-secondary" onclick="toggleAdmin()">管理者モード</button>
     </div>
 
     <div id="historyPanel" class="panel" style="display: none;">
-        <h2>内訳一覧</h2>
+        <h2 id="historyPanelTitle">内訳一覧</h2>
         <div class="history-container">
             <table>
                 <thead>
                     <tr>
-                        <th>日付</th>
-                        <th>収支</th>
-                        <th>用途</th>
-                        <th class="admin-only">操作</th>
+                        <th id="thDate">日付</th>
+                        <th id="thAmount">収支</th>
+                        <th id="thReason">用途</th>
+                        <th id="thAction" class="admin-only">操作</th>
                     </tr>
                 </thead>
                 <tbody id="historyBody"></tbody>
@@ -445,29 +516,29 @@ body.is-admin .admin-only {
     </div>
 
     <div id="adminPanel" class="panel" style="display: none;">
-        <h2>管理者ログイン</h2>
+        <h2 id="adminLoginTitle">管理者ログイン</h2>
         <input type="password" id="adminPassword" placeholder="パスワードを入力してください">
-        <button onclick="loginAdmin()">ログイン</button>
+        <button id="btnLogin" onclick="loginAdmin()">ログイン</button>
 
         <div id="adminControls">
-            <h2>データ追加</h2>
+            <h2 id="adminControlsTitle">データ追加</h2>
             
-            <label style="color:var(--text-muted);">種類</label>
+            <label id="lblType" style="color:var(--text-muted);">種類</label>
             <select id="typeInput">
-                <option value="debt">借金</option>
-                <option value="repay">返却</option>
+                <option id="optDebt" value="debt">借金</option>
+                <option id="optRepay" value="repay">返却</option>
             </select>
 
-            <label style="color:var(--text-muted);">日付 <span style="color:var(--danger-color);">*必須</span></label>
+            <label id="lblDate" style="color:var(--text-muted);">日付 <span style="color:var(--danger-color);">*必須</span></label>
             <input type="date" id="dateInput">
             
-            <label style="color:var(--text-muted);">金額 (円) <span style="color:var(--danger-color);">*必須</span></label>
+            <label id="lblAmount" style="color:var(--text-muted);">金額 (円) <span style="color:var(--danger-color);">*必須</span></label>
             <input type="number" id="amountInput" placeholder="例: 5000" min="1">
             
-            <label style="color:var(--text-muted);">用途 <span id="reasonRequiredLabel" style="color:var(--danger-color);">*借金時は必須</span></label>
+            <label id="lblReason" style="color:var(--text-muted);">用途 <span id="reasonRequiredLabel" style="color:var(--danger-color);">*借金時は必須</span></label>
             <input type="text" id="reasonInput" placeholder="例: クレーンゲーム代、自転車の駐輪代">
             
-            <button onclick="addTransaction()" style="width: 100%;">この内容で保存する</button>
+            <button id="btnSaveTransaction" onclick="addTransaction()" style="width: 100%;">この内容で保存する</button>
         </div>
     </div>
 
@@ -484,7 +555,153 @@ body.is-admin .admin-only {
 </div>
 
 <script>
-// リロード時・ページ読み込み時の初期化（管理者状態を確実にリセット）
+// 🌐 多言語テキストデータ定義
+const i18n = {
+    ja: {
+        title: "ZJH借金カウンター", totalLabel: "ZJHが私にしている借金は", loading: "読み込み中...", error: "エラー",
+        btnHistory: "内訳確認", btnAdmin: "管理者モード", historyTitle: "内訳一覧", thDate: "日付", thAmount: "収支", thReason: "用途", thAction: "操作",
+        adminLogin: "管理者ログイン", enterPass: "パスワードを入力してください", login: "ログイン", addData: "データ追加",
+        lblType: "種類", debt: "借金", repay: "返却", required: "*必須", amountYen: "金額 (円)", placeholderAmount: "例: 5000",
+        reasonRequired: "*借金時は必須", placeholderReason: "例: クレーンゲーム代、自転車の駐輪代", save: "この内容で保存する",
+        cancel: "キャンセル", confirm: "確定", yen: "円", delete: "削除",
+        toastLogin: "管理者としてログインしました", toastWrongPass: "パスワードが違います", toastNoAuth: "権限がありません",
+        toastInputDate: "日付を入力してください", toastInputAmount: "金額には正の整数を入力してください", toastInputReason: "借金の場合は用途を入力してください",
+        toastAdded: "データを追加しました", toastAddFailed: "追加失敗: ", toastDeleted: "データを削除しました", toastDeleteFailed: "削除に失敗しました: ",
+        confirmDelete: "本当にこのデータを完全に削除しますか？\n（※全体の借金総額も自動的に再計算されます）"
+    },
+    en: {
+        title: "ZJH Debt Counter", totalLabel: "ZJH's debt to me is", loading: "Loading...", error: "Error",
+        btnHistory: "Check Details", btnAdmin: "Admin Mode", historyTitle: "Breakdown List", thDate: "Date", thAmount: "Amount", thReason: "Reason", thAction: "Action",
+        adminLogin: "Admin Login", enterPass: "Please enter password", login: "Login", addData: "Add Data",
+        lblType: "Type", debt: "Debt", repay: "Repay", required: "*Required", amountYen: "Amount (Yen)", placeholderAmount: "e.g., 5000",
+        reasonRequired: "*Required for debt", placeholderReason: "e.g., Crane game, bicycle parking", save: "Save this content",
+        cancel: "Cancel", confirm: "Confirm", yen: " Yen", delete: "Delete",
+        toastLogin: "Logged in as administrator", toastWrongPass: "Incorrect password", toastNoAuth: "Unauthorized",
+        toastInputDate: "Please enter a date", toastInputAmount: "Please enter a positive integer for the amount", toastInputReason: "Please enter a reason for the debt",
+        toastAdded: "Data added successfully", toastAddFailed: "Failed to add: ", toastDeleted: "Data deleted successfully", toastDeleteFailed: "Failed to delete: ",
+        confirmDelete: "Are you sure you want to permanently delete this data?\n(*The total debt will be automatically recalculated)"
+    },
+    zh: {
+        title: "ZJH 欠款计数器", totalLabel: "ZJH 欠我的款项为", loading: "加载中...", error: "错误",
+        btnHistory: "查看明细", btnAdmin: "管理员模式", historyTitle: "明细列表", thDate: "日期", thAmount: "收支", thReason: "用途", thAction: "操作",
+        adminLogin: "管理员登录", enterPass: "请输入密码", login: "登录", addData: "添加数据",
+        lblType: "类型", debt: "借款", repay: "还款", required: "*必填", amountYen: "金额 (日元)", placeholderAmount: "例: 5000",
+        reasonRequired: "*借款时必填", placeholderReason: "例: 抓娃娃机、自行车停车费", save: "保存此内容",
+        cancel: "取消", confirm: "确定", yen: "日元", delete: "删除",
+        toastLogin: "已作为管理员登录", toastWrongPass: "密码错误", toastNoAuth: "无权限",
+        toastInputDate: "请输入日期", toastInputAmount: "请输入正整数金额", toastInputReason: "借款时请填写用途",
+        toastAdded: "数据已添加", toastAddFailed: "添加失败: ", toastDeleted: "数据已删除", toastDeleteFailed: "删除失败: ",
+        confirmDelete: "确定要永久删除此数据吗？\n（※总借款额也将自动重新计算）"
+    },
+    es: {
+        title: "Contador de Deudas de ZJH", totalLabel: "La deuda de ZJH conmigo es", loading: "Cargando...", error: "Error",
+        btnHistory: "Ver Detalles", btnAdmin: "Modo Administrador", historyTitle: "Lista de Detalles", thDate: "Fecha", thAmount: "Balance", thReason: "Concepto", thAction: "Acción",
+        adminLogin: "Iniciar Sesión de Administrador", enterPass: "Por favor, introduzca la contraseña", login: "Iniciar Sesión", addData: "Añadir Datos",
+        lblType: "Tipo", debt: "Deuda", repay: "Devolución", required: "*Obligatorio", amountYen: "Cantidad (Yenes)", placeholderAmount: "ej: 5000",
+        reasonRequired: "*Obligatorio para deudas", placeholderReason: "ej: Máquina de peluches, estacionamiento de bicicletas", save: "Guardar este contenido",
+        cancel: "Cancelar", confirm: "Confirmar", yen: " yenes", delete: "Eliminar",
+        toastLogin: "Sesión iniciada como administrador", toastWrongPass: "Contraseña incorrecta", toastNoAuth: "No autorizado",
+        toastInputDate: "Por favor, introduzca una fecha", toastInputAmount: "Por favor, introduzca un número entero positivo", toastInputReason: "Por favor, introduzca un concepto para la deuda",
+        toastAdded: "Datos añadidos con éxito", toastAddFailed: "Error al añadir: ", toastDeleted: "Datos eliminados con éxito", toastDeleteFailed: "Error al eliminar: ",
+        confirmDelete: "¿Realmente desea eliminar estos datos de forma permanente?\n(*El total de la deuda se volverá a calcular automáticamente)"
+    },
+    fr: {
+        title: "Compteur de Dette de ZJH", totalLabel: "La dette de ZJH envers moi est de", loading: "Chargement...", error: "Échec",
+        btnHistory: "Voir les Détails", btnAdmin: "Mode Administrateur", historyTitle: "Liste des Détails", thDate: "Date", thAmount: "Montant", thReason: "Motif", thAction: "Action",
+        adminLogin: "Connexion Administrateur", enterPass: "Veuillez saisir le mot de passe", login: "Se connecter", addData: "Ajouter des Données",
+        lblType: "Type", debt: "Dette", repay: "Remboursement", required: "*Obligatoire", amountYen: "Montant (Yen)", placeholderAmount: "ex: 5000",
+        reasonRequired: "*Obligatoire pour les dettes", placeholderReason: "ex: Machine à pinces, parking vélo", save: "Enregistrer ce contenu",
+        cancel: "Annuler", confirm: "Confirmer", yen: " yens", delete: "Supprimer",
+        toastLogin: "Connecté en tant qu'administrateur", toastWrongPass: "Mot de passe incorrect", toastNoAuth: "Non autorisé",
+        toastInputDate: "Veuillez saisir une date", toastInputAmount: "Veuillez saisir un nombre entier positif", toastInputReason: "Veuillez saisir un motif pour la dette",
+        toastAdded: "Données ajoutées avec succès", toastAddFailed: "Échec de l'ajout: ", toastDeleted: "Données supprimées avec succès", toastDeleteFailed: "Échec de la suppression: ",
+        confirmDelete: "Voulez-vous vraiment supprimer définitivement ces données ?\n(*Le montant total de la dette sera automatiquement recalculé)"
+    },
+    de: {
+        title: "ZJH Schuldenzähler", totalLabel: "Die Schulden von ZJH bei mir betragen", loading: "Laden...", error: "Fehler",
+        btnHistory: "Details anzeigen", btnAdmin: "Admin-Modus", historyTitle: "Detailliste", thDate: "Datum", thAmount: "Betrag", thReason: "Verwendungszweck", thAction: "Aktion",
+        adminLogin: "Admin-Login", enterPass: "Bitte Passwort eingeben", login: "Einloggen", addData: "Daten hinzufügen",
+        lblType: "Typ", debt: "Schulden", repay: "Rückzahlung", required: "*Erforderlich", amountYen: "Betrag (Yen)", placeholderAmount: "z.B. 5000",
+        reasonRequired: "*Erforderlich bei Schulden", placeholderReason: "z.B. Greifautomat, Fahrradparkplatz", save: "Diesen Inhalt speichern",
+        cancel: "Abbrechen", confirm: "Bestätigen", yen: " Yen", delete: "Löschen",
+        toastLogin: "Als Administrator eingegloggt", toastWrongPass: "Falsches Passwort", toastNoAuth: "Keine Berechtigung",
+        toastInputDate: "Bitte Datum eingeben", toastInputAmount: "Bitte einen positiven Ganzzahlbetrag eingeben", toastInputReason: "Bitte Verwendungszweck für Schulden eingeben",
+        toastAdded: "Daten erfolgreich hinzugefügt", toastAddFailed: "Hinzufügen fehlgeschlagen: ", toastDeleted: "Daten erfolgreich gelöscht", toastDeleteFailed: "Löschen fehlgeschlagen: ",
+        confirmDelete: "Möchten Sie diese Daten wirklich dauerhaft löschen?\n(*Der Gesamtschuldenbetrag wird automatisch neu berechnet)"
+    }
+};
+
+// 🌐 選択言語をローカルストレージから読み込み（デフォルトは日本語 'ja'）
+let currentLang = localStorage.getItem('selectedLang') || 'ja';
+
+// 🌐 DOMのテキストを現在の言語へ一括更新する関数
+function updateLanguageDOM() {
+    const t = i18n[currentLang];
+    
+    document.getElementById("mainTitle").innerText = t.title;
+    document.getElementById("lblTotalDisplay").innerText = t.totalLabel;
+    
+    const amountSpan = document.getElementById("amountSpan");
+    if (amountSpan.innerText.match(/読み込み中|Loading|加载中|Cargando|Chargement|Laden/)) {
+        amountSpan.innerText = t.loading;
+    } else if (amountSpan.innerText.match(/エラー|Error|错误|Échec|Fehler/)) {
+        amountSpan.innerText = t.error;
+    }
+
+    document.getElementById("btnToggleHistory").innerText = t.btnHistory;
+    document.getElementById("btnToggleAdmin").innerText = t.btnAdmin;
+    document.getElementById("historyPanelTitle").innerText = t.historyTitle;
+    
+    document.getElementById("thDate").innerText = t.thDate;
+    document.getElementById("thAmount").innerText = t.thAmount;
+    document.getElementById("thReason").innerText = t.thReason;
+    document.getElementById("thAction").innerText = t.thAction;
+    
+    document.getElementById("adminLoginTitle").innerText = t.adminLogin;
+    document.getElementById("adminPassword").placeholder = t.enterPass;
+    document.getElementById("btnLogin").innerText = t.login;
+    
+    document.getElementById("adminControlsTitle").innerText = t.addData;
+    document.getElementById("lblType").innerText = t.lblType;
+    document.getElementById("optDebt").innerText = t.debt;
+    document.getElementById("optRepay").innerText = t.repay;
+    
+    document.getElementById("lblDate").innerHTML = `${t.thDate} <span style="color:var(--danger-color);">${t.required}</span>`;
+    document.getElementById("lblAmount").innerHTML = `${t.amountYen} <span style="color:var(--danger-color);">${t.required}</span>`;
+    document.getElementById("amountInput").placeholder = t.placeholderAmount;
+    document.getElementById("reasonInput").placeholder = t.placeholderReason;
+    document.getElementById("btnSaveTransaction").innerText = t.save;
+    
+    document.getElementById("modalCancelBtn").innerText = t.cancel;
+    document.getElementById("modalConfirmBtn").innerText = t.confirm;
+
+    // レスポンシブ用CSS変数の更新
+    document.documentElement.style.setProperty('--i18n-date', `"${t.thDate}"`);
+    document.documentElement.style.setProperty('--i18n-amount', `"${t.thAmount}"`);
+    document.documentElement.style.setProperty('--i18n-reason', `"${t.thReason}"`);
+    document.documentElement.style.setProperty('--i18n-action', `"${t.thAction}"`);
+    
+    updateReasonLabel();
+}
+
+function toggleLangMenu(event) {
+    event.stopPropagation();
+    document.getElementById("langMenu").classList.toggle("show");
+}
+
+function changeLanguage(lang) {
+    currentLang = lang;
+    localStorage.setItem('selectedLang', lang); // 言語設定をブラウザへ保存
+    document.getElementById("langMenu").classList.remove("show");
+    updateLanguageDOM();
+    loadHistory(); 
+}
+
+// メニュー外クリックで閉じる
+window.addEventListener('click', () => {
+    document.getElementById("langMenu").classList.remove("show");
+});
+
 if ('scrollRestoration' in history) {
     history.scrollRestoration = 'manual';
 }
@@ -497,9 +714,9 @@ function resetPageOnLoad() {
     if (historyPanel) historyPanel.style.display = "none";
     if (adminPanel) adminPanel.style.display = "none";
     
-    // 管理者ログイン状態を解除して列を隠す
     isAdminLoggedIn = false;
     document.body.classList.remove("is-admin");
+    updateLanguageDOM(); // 初期読み込み時の言語適用
 }
 
 window.addEventListener('beforeunload', resetPageOnLoad);
@@ -508,17 +725,20 @@ window.addEventListener('load', () => {
     setTimeout(resetPageOnLoad, 0);
 });
 
-// 種別選択時の用途必須ラベル切り替え
-document.getElementById('typeInput').addEventListener('change', function(e) {
-    const label = document.getElementById('reasonRequiredLabel');
-    if(e.target.value === 'debt') {
-        label.innerText = "*借金時は必須";
+function updateReasonLabel() {
+    const type = document.getElementById("typeInput").value;
+    const label = document.getElementById("reasonRequiredLabel");
+    const t = i18n[currentLang];
+    if(type === 'debt') {
+        label.innerText = t.reasonRequired;
         label.style.display = 'inline';
     } else {
         label.innerText = "";
         label.style.display = 'none';
     }
-});
+}
+
+document.getElementById('typeInput').addEventListener('change', updateReasonLabel);
 
 // --- configuration ---
 const CONFIG_URL = "https://cjbwqutwvymejgsdnjzf.supabase.co";
@@ -532,7 +752,7 @@ try {
     if (window.supabase && window.supabase.createClient) {
         supabaseClient = window.supabase.createClient(CONFIG_URL, CONFIG_KEY);
     } else {
-        document.getElementById("amountSpan").innerText = "エラー";
+        document.getElementById("amountSpan").innerText = i18n[currentLang].error;
     }
 } catch (e) {
     console.error("Supabase初期化エラー:", e);
@@ -592,7 +812,6 @@ function toggleHistory(){
     }
 }
 
-// 管理者モードをやめた（閉じた）ら、ログイン状態を解除して操作列を隠す
 function toggleAdmin(){
     const panel = document.getElementById("adminPanel");
     if(!panel) return;
@@ -604,7 +823,7 @@ function toggleAdmin(){
         document.body.classList.remove("is-admin");
         document.getElementById("adminControls").style.display = "none";
         document.getElementById("adminPassword").value = ""; 
-        loadHistory(); // 操作列を非表示にするために再描画
+        loadHistory(); 
     } else {
         panel.style.display = "block";
     }
@@ -612,19 +831,21 @@ function toggleAdmin(){
 
 function loginAdmin(){
     const pass = document.getElementById("adminPassword").value;
+    const t = i18n[currentLang];
     if(pass === ADMIN_PASSWORD){
         isAdminLoggedIn = true;
-        document.body.classList.add("is-admin"); // 操作列表示用のクラス付与
+        document.body.classList.add("is-admin"); 
         document.getElementById("adminControls").style.display = "block";
-        showToast("管理者としてログインしました");
+        showToast(t.toastLogin);
         loadHistory(); 
     }else{
-        showToast("パスワードが違います", "error");
+        showToast(t.toastWrongPass, "error");
     }
 }
 
 async function loadTotal(){
     if (!supabaseClient) return;
+    const t = i18n[currentLang];
     try {
         const { data, error } = await supabaseClient
             .from("debt")
@@ -634,17 +855,17 @@ async function loadTotal(){
 
         if(error){
             console.error(error);
-            document.getElementById("amountSpan").innerText = "エラー";
+            document.getElementById("amountSpan").innerText = t.error;
             return;
         }
 
         if (!data) {
             document.getElementById("amountSpan").style.fontSize = "16px";
-            document.getElementById("amountSpan").innerHTML = "データ未作成<br><small style='color:#aaa;'>Supabaseのdebtテーブルに id:1, total:0 の行を追加してください</small>";
+            document.getElementById("amountSpan").innerHTML = "No data found.";
             return;
         }
 
-        document.getElementById("amountSpan").innerText = `${Number(data.total).toLocaleString()}円`;
+        document.getElementById("amountSpan").innerText = `${Number(data.total).toLocaleString()}${t.yen}`;
     } catch (e) {
         console.error(e);
     }
@@ -652,8 +873,8 @@ async function loadTotal(){
 
 async function loadHistory(){
     if (!supabaseClient) return;
+    const t = i18n[currentLang];
     try {
-        // 新しい日付のデータが上に来るように降順で取得
         const { data, error } = await supabaseClient
             .from("history")
             .select("*")
@@ -670,7 +891,7 @@ async function loadHistory(){
             let actionTdContent = "";
 
             if (isAdminLoggedIn) {
-                actionTdContent = `<button class="btn-danger" onclick="deleteTransaction('${row.id}', ${row.amount})">削除</button>`;
+                actionTdContent = `<button class="btn-danger" onclick="deleteTransaction('${row.id}', ${row.amount})">${t.delete}</button>`;
             }
 
             const isDebt = Number(row.amount) > 0;
@@ -680,7 +901,7 @@ async function loadHistory(){
             html += `
             <tr>
                 <td>${row.date}</td>
-                <td><span class="${amountClass}">${amountPrefix}${Number(row.amount).toLocaleString()}円</span></td>
+                <td><span class="${amountClass}">${amountPrefix}${Number(row.amount).toLocaleString()}${t.yen}</span></td>
                 <td>${row.reason || "-"}</td>
                 <td class="admin-only"><div class="action-buttons-wrap">${actionTdContent}</div></td>
             </tr>`;
@@ -693,8 +914,9 @@ async function loadHistory(){
 
 async function addTransaction(){
     if (!supabaseClient) return;
+    const t = i18n[currentLang];
     if (!isAdminLoggedIn) {
-        showToast("権限がありません", "error");
+        showToast(t.toastNoAuth, "error");
         return;
     }
 
@@ -704,19 +926,18 @@ async function addTransaction(){
     const reason = document.getElementById("reasonInput").value;
 
     if (!date) {
-        showToast("日付を入力してください", "error");
+        showToast(t.toastInputDate, "error");
         return;
     }
     if (!rawAmount || rawAmount <= 0) {
-        showToast("金額には正の整数を入力してください", "error");
+        showToast(t.toastInputAmount, "error");
         return;
     }
     if (type === "debt" && !reason.trim()) {
-        showToast("借金の場合は用途を入力してください", "error");
+        showToast(t.toastInputReason, "error");
         return;
     }
 
-    // 借金ならプラス、返却ならマイナス
     const finalAmount = type === "debt" ? rawAmount : -rawAmount;
 
     const { error: insertError } = await supabaseClient
@@ -724,37 +945,35 @@ async function addTransaction(){
         .insert([{ date, amount: finalAmount, reason }]);
 
     if(insertError){
-        showToast("追加失敗: " + insertError.message, "error");
+        showToast(t.toastAddFailed + insertError.message, "error");
         return;
     }
 
-    // 総額の加減算（丸め込みを廃止し、純粋計算へ）
     const { data: debtRow } = await supabaseClient.from("debt").select("total").eq("id", 1).single();
     await supabaseClient.from("debt").update({ total: Number(debtRow.total) + finalAmount }).eq("id", 1);
 
     document.getElementById("amountInput").value = "";
     document.getElementById("reasonInput").value = "";
     
-    // セレクトボックスのデフォルトリセット
     if(type === "repay") {
         document.getElementById("typeInput").value = "debt"; 
-        document.getElementById('reasonRequiredLabel').innerText = "*借金時は必須";
-        document.getElementById('reasonRequiredLabel').style.display = 'inline';
+        updateReasonLabel();
     }
 
     await loadTotal();
     await loadHistory();
-    showToast("データを追加しました");
+    showToast(t.toastAdded);
 }
 
 async function deleteTransaction(historyId, amount){
     if (!supabaseClient) return;
+    const t = i18n[currentLang];
     if (!isAdminLoggedIn) {
-        showToast("権限がありません", "error");
+        showToast(t.toastNoAuth, "error");
         return;
     }
 
-    const confirmed = await showCustomConfirm("本当にこのデータを完全に削除しますか？\n（※全体の借金総額も自動的に再計算されます）", true);
+    const confirmed = await showCustomConfirm(t.confirmDelete, true);
     if (!confirmed) return;
 
     const { error: deleteError } = await supabaseClient
@@ -763,11 +982,10 @@ async function deleteTransaction(historyId, amount){
         .eq("id", historyId);
 
     if (deleteError) {
-        showToast("削除に失敗しました: " + deleteError.message, "error");
+        showToast(t.toastDeleteFailed + deleteError.message, "error");
         return;
     }
 
-    // 削除分を逆算（借金データを消したら総額からマイナス、返却データを消したら総額へプラス）
     const { data: debtRow } = await supabaseClient.from("debt").select("total").eq("id", 1).single();
     await supabaseClient
         .from("debt")
@@ -776,10 +994,9 @@ async function deleteTransaction(historyId, amount){
 
     await loadTotal();
     await loadHistory();
-    showToast("データを削除しました");
+    showToast(t.toastDeleted);
 }
 
-// エントリーポイント
 if (supabaseClient) {
     loadTotal();
     loadHistory();
