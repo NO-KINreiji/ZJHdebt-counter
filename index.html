@@ -555,7 +555,7 @@ body.is-admin .admin-only {
 </div>
 
 <script>
-// 🌐 多言語テキストデータ定義 (ネイティブUI表現に最適化)
+// 🌐 多言語テキストデータ定義
 const i18n = {
     ja: {
         title: "ZJH借金カウンター", totalLabel: "ZJHが私にしている借金は", loading: "読み込み中...", error: "エラー",
@@ -631,10 +631,8 @@ const i18n = {
     }
 };
 
-// 🌐 選択言語をローカルストレージから読み込み（デフォルトは日本語 'ja'）
 let currentLang = localStorage.getItem('selectedLang') || 'ja';
 
-// 🌐 DOMのテキストを現在の言語へ一括更新する関数
 function updateLanguageDOM() {
     const t = i18n[currentLang];
     
@@ -675,7 +673,6 @@ function updateLanguageDOM() {
     document.getElementById("modalCancelBtn").innerText = t.cancel;
     document.getElementById("modalConfirmBtn").innerText = t.confirm;
 
-    // レスポンシブ用CSS変数の更新
     document.documentElement.style.setProperty('--i18n-date', `"${t.thDate}"`);
     document.documentElement.style.setProperty('--i18n-amount', `"${t.thAmount}"`);
     document.documentElement.style.setProperty('--i18n-reason', `"${t.thReason}"`);
@@ -697,7 +694,6 @@ function changeLanguage(lang) {
     loadHistory(); 
 }
 
-// メニュー外クリックで閉じる
 window.addEventListener('click', () => {
     document.getElementById("langMenu").classList.remove("show");
 });
@@ -715,6 +711,7 @@ function resetPageOnLoad() {
     if (adminPanel) adminPanel.style.display = "none";
     
     isAdminLoggedIn = false;
+    globalAdminPassword = "";
     document.body.classList.remove("is-admin");
     updateLanguageDOM(); 
 }
@@ -743,8 +740,8 @@ document.getElementById('typeInput').addEventListener('change', updateReasonLabe
 // --- configuration ---
 const CONFIG_URL = "https://cjbwqutwvymejgsdnjzf.supabase.co";
 const CONFIG_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqYndxdXR3dnltZWpnc2RuanpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3OTgyMjIsImV4cCI6MjA5NjM3NDIyMn0.C20QTlycDBvgfMjwAGaPQ1VLhlPj0iGA3C3xYi463bs";
-const ADMIN_PASSWORD = "zjhkanekaesanai";
 
+let globalAdminPassword = "";
 let supabaseClient = null;
 let isAdminLoggedIn = false; 
 
@@ -820,6 +817,7 @@ function toggleAdmin(){
     if(isBlock) {
         panel.style.display = "none";
         isAdminLoggedIn = false;
+        globalAdminPassword = "";
         document.body.classList.remove("is-admin");
         document.getElementById("adminControls").style.display = "none";
         document.getElementById("adminPassword").value = ""; 
@@ -829,29 +827,39 @@ function toggleAdmin(){
     }
 }
 
-function loginAdmin(){
+async function loginAdmin(){
     const pass = document.getElementById("adminPassword").value;
     const t = i18n[currentLang];
-    if(pass === ADMIN_PASSWORD){
-        isAdminLoggedIn = true;
-        document.body.classList.add("is-admin"); 
-        document.getElementById("adminControls").style.display = "block";
-        showToast(t.toastLogin);
-        loadHistory(); 
-    }else{
+    
+    try {
+        const { data: isCorrect, error } = await supabaseClient
+            .rpc('check_admin_password', { input_password: pass });
+
+        if (error || !isCorrect) {
+            showToast(t.toastWrongPass, "error");
+            globalAdminPassword = "";
+        } else {
+            isAdminLoggedIn = true;
+            globalAdminPassword = pass;
+            document.body.classList.add("is-admin"); 
+            document.getElementById("adminControls").style.display = "block";
+            showToast(t.toastLogin);
+            loadHistory(); 
+        }
+    } catch (e) {
+        console.error(e);
         showToast(t.toastWrongPass, "error");
     }
 }
 
+// 🧮 差分更新ではなく、毎回0からhistoryテーブルの全要素をすべて足して総額を計算する
 async function loadTotal(){
     if (!supabaseClient) return;
     const t = i18n[currentLang];
     try {
         const { data, error } = await supabaseClient
-            .from("debt")
-            .select("total")
-            .eq("id", 1)
-            .maybeSingle();
+            .from("history")
+            .select("amount");
 
         if(error){
             console.error(error);
@@ -859,15 +867,18 @@ async function loadTotal(){
             return;
         }
 
-        if (!data) {
-            document.getElementById("amountSpan").style.fontSize = "16px";
-            document.getElementById("amountSpan").innerHTML = "No data found.";
-            return;
+        // 初期値0から、すべての履歴（amount要素）をループして足し合わせる
+        let currentTotal = 0;
+        if (data && data.length > 0) {
+            for (let i = 0; i < data.length; i++) {
+                currentTotal += Number(data[i].amount);
+            }
         }
 
-        document.getElementById("amountSpan").innerText = `${Number(data.total).toLocaleString()}${t.yen}`;
+        document.getElementById("amountSpan").innerText = `${currentTotal.toLocaleString()}${t.yen}`;
     } catch (e) {
         console.error(e);
+        document.getElementById("amountSpan").innerText = t.error;
     }
 }
 
@@ -891,7 +902,7 @@ async function loadHistory(){
             let actionTdContent = "";
 
             if (isAdminLoggedIn) {
-                actionTdContent = `<button class="btn-danger" onclick="deleteTransaction('${row.id}', ${row.amount})">${t.delete}</button>`;
+                actionTdContent = `<button class="btn-danger" onclick="deleteTransaction('${row.id}')">${t.delete}</button>`;
             }
 
             const isDebt = Number(row.amount) > 0;
@@ -925,32 +936,22 @@ async function addTransaction(){
     const rawAmount = Number(document.getElementById("amountInput").value);
     const reason = document.getElementById("reasonInput").value;
 
-    if (!date) {
-        showToast(t.toastInputDate, "error");
-        return;
-    }
-    if (!rawAmount || rawAmount <= 0) {
-        showToast(t.toastInputAmount, "error");
-        return;
-    }
-    if (type === "debt" && !reason.trim()) {
-        showToast(t.toastInputReason, "error");
-        return;
-    }
+    if (!date) { showToast(t.toastInputDate, "error"); return; }
+    if (!rawAmount || rawAmount <= 0) { showToast(t.toastInputAmount, "error"); return; }
+    if (type === "debt" && !reason.trim()) { showToast(t.toastInputReason, "error"); return; }
 
     const finalAmount = type === "debt" ? rawAmount : -rawAmount;
 
+    // ヘッダーにパスワードを含めて安全に挿入
     const { error: insertError } = await supabaseClient
         .from("history")
-        .insert([{ date, amount: finalAmount, reason }]);
+        .insert([{ date, amount: finalAmount, reason }])
+        .setHeaders({ "x-admin-password": globalAdminPassword });
 
     if(insertError){
         showToast(t.toastAddFailed + insertError.message, "error");
         return;
     }
-
-    const { data: debtRow } = await supabaseClient.from("debt").select("total").eq("id", 1).single();
-    await supabaseClient.from("debt").update({ total: Number(debtRow.total) + finalAmount }).eq("id", 1);
 
     document.getElementById("amountInput").value = "";
     document.getElementById("reasonInput").value = "";
@@ -960,12 +961,13 @@ async function addTransaction(){
         updateReasonLabel();
     }
 
+    // 挿入完了後、すべてのデータを0から再計算・再読込
     await loadTotal();
     await loadHistory();
     showToast(t.toastAdded);
 }
 
-async function deleteTransaction(historyId, amount){
+async function deleteTransaction(historyId){
     if (!supabaseClient) return;
     const t = i18n[currentLang];
     if (!isAdminLoggedIn) {
@@ -976,22 +978,19 @@ async function deleteTransaction(historyId, amount){
     const confirmed = await showCustomConfirm(t.confirmDelete, true);
     if (!confirmed) return;
 
+    // ヘッダーにパスワードを含めて安全に削除
     const { error: deleteError } = await supabaseClient
         .from("history")
         .delete()
-        .eq("id", historyId);
+        .eq("id", historyId)
+        .setHeaders({ "x-admin-password": globalAdminPassword });
 
     if (deleteError) {
         showToast(t.toastDeleteFailed + deleteError.message, "error");
         return;
     }
 
-    const { data: debtRow } = await supabaseClient.from("debt").select("total").eq("id", 1).single();
-    await supabaseClient
-        .from("debt")
-        .update({ total: Number(debtRow.total) - Number(amount) })
-        .eq("id", 1);
-
+    // 削除完了後、すべてのデータを0から再計算・再読込
     await loadTotal();
     await loadHistory();
     showToast(t.toastDeleted);
@@ -1000,8 +999,11 @@ async function deleteTransaction(historyId, amount){
 if (supabaseClient) {
     loadTotal();
     loadHistory();
-    supabaseClient.channel("debt-realtime").on("postgres_changes", { event: "*", schema: "public", table: "debt" }, () => { loadTotal(); }).subscribe();
-    supabaseClient.channel("history-realtime").on("postgres_changes", { event: "*", schema: "public", table: "history" }, () => { loadHistory(); }).subscribe();
+    // リアルタイム検知イベントも、historyテーブルの変更を検知して0から再計算するロジックに統合
+    supabaseClient.channel("history-realtime").on("postgres_changes", { event: "*", schema: "public", table: "history" }, () => { 
+        loadTotal(); 
+        loadHistory();
+    }).subscribe();
 }
 </script>
 
