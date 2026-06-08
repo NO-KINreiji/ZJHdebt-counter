@@ -564,7 +564,7 @@ const i18n = {
         cancel: "キャンセル", confirm: "確定", yen: "円", delete: "削除",
         toastLogin: "管理者としてログインしました", toastWrongPass: "パスワードが違います", toastNoAuth: "権限がありません",
         toastInputDate: "日付を選択してください", toastInputAmount: "正しい金額を入力してください", toastInputReason: "借金の場合は用途を入力してください",
-        toastAdded: "データを追加しました", toastAddFailed: "追加に失敗しました: ", toastDeleted: "データを削除しました", toastDeleteFailed: "削除に失敗しました: ",
+        toastAdded: "データを追加命令を送信しました", toastAddFailed: "追加に失敗しました: ", toastDeleted: "データを削除命令を送信しました", toastDeleteFailed: "削除に失敗しました: ",
         confirmDelete: "本当にこのデータを削除しますか？\n（※全体の借金総額も自動的に再計算されます）"
     },
     en: {
@@ -576,7 +576,7 @@ const i18n = {
         cancel: "Cancel", confirm: "Confirm", yen: " Yen", delete: "Delete",
         toastLogin: "Logged in successfully", toastWrongPass: "Incorrect password", toastNoAuth: "Access denied",
         toastInputDate: "Please select a date.", toastInputAmount: "Please enter a valid amount.", toastInputReason: "Please enter a reason for the debt.",
-        toastAdded: "Transaction added.", toastAddFailed: "Failed to add: ", toastDeleted: "Transaction deleted.", toastDeleteFailed: "Failed to delete: ",
+        toastAdded: "Sent insert command.", toastAddFailed: "Failed to add: ", toastDeleted: "Sent delete command.", toastDeleteFailed: "Failed to delete: ",
         confirmDelete: "Are you sure you want to delete this record?\n(The total balance will be recalculated automatically.)"
     },
     zh: {
@@ -588,7 +588,7 @@ const i18n = {
         cancel: "取消", confirm: "确定", yen: "日元", delete: "删除",
         toastLogin: "登录成功", toastWrongPass: "密码错误", toastNoAuth: "无权限操作",
         toastInputDate: "请选择日期", toastInputAmount: "请输入有效金额", toastInputReason: "借出时请填写用途",
-        toastAdded: "记录添加成功", toastAddFailed: "添加失败: ", toastDeleted: "记录已删除", toastDeleteFailed: "删除失败: ",
+        toastAdded: "添加指令已发送", toastAddFailed: "添加失败: ", toastDeleted: "删除指令已发送", toastDeleteFailed: "删除失败: ",
         confirmDelete: "确定要删除这条记录吗？\n（总欠款金额将自动重新计算）"
     },
     es: {
@@ -600,7 +600,7 @@ const i18n = {
         cancel: "Cancelar", confirm: "Confirmar", yen: " ¥", delete: "Eliminar",
         toastLogin: "Sesión iniciada correctamente", toastWrongPass: "Contraseña incorrecta", toastNoAuth: "Acceso denegado",
         toastInputDate: "Por favor, selecciona una fecha.", toastInputAmount: "Por favor, introduce un monto válido.", toastInputReason: "El concepto es obligatorio para los préstamos.",
-        toastAdded: "Movimiento añadido.", toastAddFailed: "Error al guardar: ", toastDeleted: "Movimiento eliminado.", toastDeleteFailed: "Error al eliminar: ",
+        toastAdded: "Comando de inserción enviado.", toastAddFailed: "Error al guardar: ", toastDeleted: "Comando de eliminación enviado.", toastDeleteFailed: "Error al eliminar: ",
         confirmDelete: "¿Seguro que quieres eliminar este registro?\n(El balance total se recalculará automáticamente.)"
     },
     fr: {
@@ -612,7 +612,7 @@ const i18n = {
         cancel: "Annuler", confirm: "Confirmer", yen: " ¥", delete: "Supprimer",
         toastLogin: "Connexion réussie", toastWrongPass: "Mot de passe incorrect", toastNoAuth: "Accès refusé",
         toastInputDate: "Veuillez sélectionner une date.", toastInputAmount: "Veuillez saisir un montant valide.", toastInputReason: "Le motif est requis pour un prêt.",
-        toastAdded: "Transaction ajoutée.", toastAddFailed: "Échec de l'ajout : ", toastDeleted: "Transaction supprimée.", toastDeleteFailed: "Échec de la suppression : ",
+        toastAdded: "Commande d'ajout envoyée.", toastAddFailed: "Échec de l'ajout : ", toastDeleted: "Commande de suppression envoyée.", toastDeleteFailed: "Échec de la suppression : ",
         confirmDelete: "Voulez-vous vraiment supprimer cet enregistrement ?\n(Le solde total sera recalculé automatiquement.)"
     },
     de: {
@@ -622,9 +622,9 @@ const i18n = {
         lblType: "Art", debt: "Verliehen", repay: "Zurückgezahlt", required: "*Erforderlich", amountYen: "Betrag (Yen)", placeholderAmount: "z.B. 5000",
         reasonRequired: "*Erforderlich beim Verleihen", placeholderReason: "z.B. Mittagessen, Ticket", save: "Speichern",
         cancel: "Abbrechen", confirm: "Bestätigen", yen: " ¥", delete: "Löschen",
-        toastLogin: "Erfolgreich eingeloggt", toastWrongPass: "Falsches Passwort", toastNoAuth: "Zugriff verweigert",
+        toastLogin: "Erfolgreich einggeloggt", toastWrongPass: "Falsches Passwort", toastNoAuth: "Zugriff verweigert",
         toastInputDate: "Bitte ein Datum auswählen.", toastInputAmount: "Bitte einen gültigen Betrag eingeben.", toastInputReason: "Bitte einen Zweck angeben.",
-        toastAdded: "Eintrag gespeichert.", toastAddFailed: "Fehler beim Speichern: ", toastDeleted: "Eintrag gelöscht.", toastDeleteFailed: "Fehler beim Löschen: ",
+        toastAdded: "Einfügebefehl gesendet.", toastAddFailed: "Fehler beim Speichern: ", toastDeleted: "Löschbefehl gesendet.", toastDeleteFailed: "Fehler beim Löschen: ",
         confirmDelete: "Möchten Sie diesen Eintrag wirklich löschen?\n(Der Gesamtsaldo wird automatisch neu berechnet.)"
     }
 };
@@ -843,6 +843,7 @@ async function loginAdmin(){
     }
 }
 
+// 🧮 常に単一ソース（DBの全要素）から0ベースで合計値を集計する関数
 async function loadTotal(){
     if (!supabaseClient) return;
     const t = i18n[currentLang];
@@ -870,6 +871,7 @@ async function loadTotal(){
     }
 }
 
+// 📋 常に単一ソース（DBの最新状態）から履歴を全同期して上書き描画する関数
 async function loadHistory(){
     if (!supabaseClient) return;
     const t = i18n[currentLang];
@@ -907,7 +909,7 @@ async function loadHistory(){
     }
 }
 
-// 【改善】追加処理の完了直後に、画面の再描画を確実に実行させる
+// ➕ 【単一ソース化】データを送信するだけ。画面更新処理はここでは呼び出さない
 async function addTransaction(){
     if (!supabaseClient) return;
     const t = i18n[currentLang];
@@ -934,6 +936,7 @@ async function addTransaction(){
         return;
     }
 
+    // フォーム入力欄のクリア処理のみ行う
     document.getElementById("amountInput").value = "";
     document.getElementById("reasonInput").value = "";
     if(type === "repay") {
@@ -941,13 +944,10 @@ async function addTransaction(){
         updateReasonLabel();
     }
 
-    // 確実に再計算・履歴一覧の再取得を走らせる
-    await loadTotal();
-    await loadHistory();
     showToast(t.toastAdded);
 }
 
-// 【改善】削除の通信が成功したら、リアルタイムに頼らずその場で即座に画面から消す
+// ➖ 【単一ソース化】データを削除するだけ。画面更新処理はここでは呼び出さない
 async function deleteTransaction(historyId){
     if (!supabaseClient) return;
     const t = i18n[currentLang];
@@ -967,22 +967,26 @@ async function deleteTransaction(historyId){
         return;
     }
 
-    // 削除完了後、その場で即座に合計金額と履歴一覧を最新状態に上書きする
-    await loadTotal();
-    await loadHistory();
     showToast(t.toastDeleted);
 }
 
-// 【改善】外部ブラウザでの同時変更（別画面からの追加など）を検知したときだけ再計算する形に変更
+// ⚡ 【最重要】すべての更新をここに集約。変更イベントを検知したら無条件で0から再計算する
 if (supabaseClient) {
+    // 初回ロード
     loadTotal();
     loadHistory();
     
-    supabaseClient.channel("history-realtime").on("postgres_changes", { event: "*", schema: "public", table: "history" }, (payload) => { 
-        // 自分が操作したイベント以外（他人が動かした等）のとき、念のため同期する
-        loadTotal(); 
-        loadHistory();
-    }).subscribe();
+    // リアルタイムリスナー設定
+    supabaseClient
+        .channel("history-realtime-global")
+        .on("postgres_changes", { event: "*", schema: "public", table: "history" }, (payload) => { 
+            console.log("リアルタイム変更検知:", payload.event);
+            // 命令の発火元が誰であるか、追加・削除のどちらであるかを一切問わず、
+            // 変更通知を受け取ったら、DBから今存在する生データを引き直して画面を上書きする
+            loadTotal(); 
+            loadHistory();
+        })
+        .subscribe();
 }
 </script>
 
