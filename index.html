@@ -225,6 +225,14 @@ tr:last-child {
     flex-wrap: wrap;
 }
 
+/* 🌟 管理者専用の列・要素を制御する設定 🌟 */
+.admin-only {
+    display: none !important;
+}
+body.is-admin .admin-only {
+    display: table-cell !important;
+}
+
 /* 自作カスタム確認ダイアログ(モーダル) */
 .modal-overlay {
     position: fixed;
@@ -272,7 +280,7 @@ tr:last-child {
     justify-content: center;
 }
 
-/* 🌟 トースト通知：物理的な画面に対して完全固定 🌟 */
+/* トースト通知 */
 .toast-container {
     position: fixed;
     top: -100px; 
@@ -352,13 +360,18 @@ tr:last-child {
         font-weight: 600;
         color: var(--text-muted);
     }
-    /* カラム名変更に合わせたレスポンシブ対応 */
+    
+    /* 残高列をなくした 4列構成の見出しマッピング */
     td:nth-of-type(1):before { content: "日付"; }
     td:nth-of-type(2):before { content: "収支"; }
-    td:nth-of-type(3):before { content: "残高"; }
-    td:nth-of-type(4):before { content: "用途"; }
-    td:nth-of-type(5):before { content: "操作"; }
+    td:nth-of-type(3):before { content: "用途"; }
+    td:nth-of-type(4):before { content: "操作"; }
     
+    /* スマホ環境かつ管理者ログイン時のみ操作ブロックを表示 */
+    body.is-admin .admin-only {
+        display: block !important;
+    }
+
     td .action-buttons-wrap {
         display: flex;
         flex-direction: column; 
@@ -405,7 +418,7 @@ tr:last-child {
     <h1>ZJH借金カウンター</h1>
 
     <div id="totalDisplay">
-        <span class="total-label">現在の全体の収支は</span>
+        <span class="total-label">ZJHが私にしている借金は</span>
         <span class="total-amount" id="amountSpan">読み込み中...</span>
     </div>
 
@@ -415,16 +428,15 @@ tr:last-child {
     </div>
 
     <div id="historyPanel" class="panel" style="display: none;">
-        <h2>内訳一覧（通帳形式）</h2>
+        <h2>内訳一覧</h2>
         <div class="history-container">
             <table>
                 <thead>
                     <tr>
                         <th>日付</th>
                         <th>収支</th>
-                        <th>残高</th>
                         <th>用途</th>
-                        <th>操作</th>
+                        <th class="admin-only">操作</th>
                     </tr>
                 </thead>
                 <tbody id="historyBody"></tbody>
@@ -442,14 +454,14 @@ tr:last-child {
             
             <label style="color:var(--text-muted);">種類</label>
             <select id="typeInput">
-                <option value="debt">借金 (残高が増える)</option>
-                <option value="repay">返却 (残高が減る)</option>
+                <option value="debt">借金</option>
+                <option value="repay">返却</option>
             </select>
 
             <label style="color:var(--text-muted);">日付 <span style="color:var(--danger-color);">*必須</span></label>
             <input type="date" id="dateInput">
             
-            <label style="color:var(--text-muted);">金額 (円) <span style="color:var(--danger-color);">*必須(正の整数)</span></label>
+            <label style="color:var(--text-muted);">金額 (円) <span style="color:var(--danger-color);">*必須</span></label>
             <input type="number" id="amountInput" placeholder="例: 5000" min="1">
             
             <label style="color:var(--text-muted);">用途 <span id="reasonRequiredLabel" style="color:var(--danger-color);">*借金時は必須</span></label>
@@ -472,6 +484,7 @@ tr:last-child {
 </div>
 
 <script>
+// リロード時・ページ読み込み時の初期化（管理者状態を確実にリセット）
 if ('scrollRestoration' in history) {
     history.scrollRestoration = 'manual';
 }
@@ -483,6 +496,10 @@ function resetPageOnLoad() {
     const adminPanel = document.getElementById("adminPanel");
     if (historyPanel) historyPanel.style.display = "none";
     if (adminPanel) adminPanel.style.display = "none";
+    
+    // 管理者ログイン状態を解除して列を隠す
+    isAdminLoggedIn = false;
+    document.body.classList.remove("is-admin");
 }
 
 window.addEventListener('beforeunload', resetPageOnLoad);
@@ -491,12 +508,14 @@ window.addEventListener('load', () => {
     setTimeout(resetPageOnLoad, 0);
 });
 
-// 種別によって用途の必須ラベルの表示を切り替える
+// 種別選択時の用途必須ラベル切り替え
 document.getElementById('typeInput').addEventListener('change', function(e) {
     const label = document.getElementById('reasonRequiredLabel');
     if(e.target.value === 'debt') {
+        label.innerText = "*借金時は必須";
         label.style.display = 'inline';
     } else {
+        label.innerText = "";
         label.style.display = 'none';
     }
 });
@@ -573,17 +592,29 @@ function toggleHistory(){
     }
 }
 
+// 管理者モードをやめた（閉じた）ら、ログイン状態を解除して操作列を隠す
 function toggleAdmin(){
     const panel = document.getElementById("adminPanel");
     if(!panel) return;
     const isBlock = window.getComputedStyle(panel).display === "block";
-    panel.style.display = isBlock ? "none" : "block";
+    
+    if(isBlock) {
+        panel.style.display = "none";
+        isAdminLoggedIn = false;
+        document.body.classList.remove("is-admin");
+        document.getElementById("adminControls").style.display = "none";
+        document.getElementById("adminPassword").value = ""; 
+        loadHistory(); // 操作列を非表示にするために再描画
+    } else {
+        panel.style.display = "block";
+    }
 }
 
 function loginAdmin(){
     const pass = document.getElementById("adminPassword").value;
     if(pass === ADMIN_PASSWORD){
         isAdminLoggedIn = true;
+        document.body.classList.add("is-admin"); // 操作列表示用のクラス付与
         document.getElementById("adminControls").style.display = "block";
         showToast("管理者としてログインしました");
         loadHistory(); 
@@ -622,38 +653,24 @@ async function loadTotal(){
 async function loadHistory(){
     if (!supabaseClient) return;
     try {
-        // 通帳のように残高を計算するため、古い順（昇順）で全データ取得
+        // 新しい日付のデータが上に来るように降順で取得
         const { data, error } = await supabaseClient
             .from("history")
             .select("*")
-            .order("date", { ascending: true })
-            .order("id", { ascending: true });
+            .order("date", { ascending: false })
+            .order("id", { ascending: false });
 
         if(error){
             console.error(error);
             return;
         }
 
-        // JS側でその時点の残高を計算する
-        let currentTotal = 0;
-        const processedData = data.map(row => {
-            currentTotal += Number(row.amount);
-            return {
-                ...row,
-                runningBalance: currentTotal
-            };
-        });
-
-        // 表示時は新しいものが上に来るように配列を反転させる
-        processedData.reverse();
-
         let html = "";
-        for(const row of processedData){
-            let actionTdContent = "-";
+        for(const row of data){
+            let actionTdContent = "";
 
             if (isAdminLoggedIn) {
-                const deleteButton = `<button class="btn-danger" onclick="deleteTransaction('${row.id}', ${row.amount})">削除</button>`;
-                actionTdContent = `<div class="action-buttons-wrap">${deleteButton}</div>`;
+                actionTdContent = `<button class="btn-danger" onclick="deleteTransaction('${row.id}', ${row.amount})">削除</button>`;
             }
 
             const isDebt = Number(row.amount) > 0;
@@ -664,9 +681,8 @@ async function loadHistory(){
             <tr>
                 <td>${row.date}</td>
                 <td><span class="${amountClass}">${amountPrefix}${Number(row.amount).toLocaleString()}円</span></td>
-                <td>${Number(row.runningBalance).toLocaleString()}円</td>
                 <td>${row.reason || "-"}</td>
-                <td>${actionTdContent}</td>
+                <td class="admin-only"><div class="action-buttons-wrap">${actionTdContent}</div></td>
             </tr>`;
         }
         document.getElementById("historyBody").innerHTML = html;
@@ -687,7 +703,6 @@ async function addTransaction(){
     const rawAmount = Number(document.getElementById("amountInput").value);
     const reason = document.getElementById("reasonInput").value;
 
-    // バリデーション
     if (!date) {
         showToast("日付を入力してください", "error");
         return;
@@ -701,10 +716,9 @@ async function addTransaction(){
         return;
     }
 
-    // 返却ならマイナスの値にする
+    // 借金ならプラス、返却ならマイナス
     const finalAmount = type === "debt" ? rawAmount : -rawAmount;
 
-    // is_paid は除外し、amountに収支を記録
     const { error: insertError } = await supabaseClient
         .from("history")
         .insert([{ date, amount: finalAmount, reason }]);
@@ -714,13 +728,17 @@ async function addTransaction(){
         return;
     }
 
+    // 総額の加減算（丸め込みを廃止し、純粋計算へ）
     const { data: debtRow } = await supabaseClient.from("debt").select("total").eq("id", 1).single();
     await supabaseClient.from("debt").update({ total: Number(debtRow.total) + finalAmount }).eq("id", 1);
 
     document.getElementById("amountInput").value = "";
     document.getElementById("reasonInput").value = "";
+    
+    // セレクトボックスのデフォルトリセット
     if(type === "repay") {
-        document.getElementById("typeInput").value = "debt"; // デフォルトに戻す
+        document.getElementById("typeInput").value = "debt"; 
+        document.getElementById('reasonRequiredLabel').innerText = "*借金時は必須";
         document.getElementById('reasonRequiredLabel').style.display = 'inline';
     }
 
@@ -736,7 +754,7 @@ async function deleteTransaction(historyId, amount){
         return;
     }
 
-    const confirmed = await showCustomConfirm("本当にこのデータを完全に削除しますか？\n（※全体の収支も自動的に再計算されます）", true);
+    const confirmed = await showCustomConfirm("本当にこのデータを完全に削除しますか？\n（※全体の借金総額も自動的に再計算されます）", true);
     if (!confirmed) return;
 
     const { error: deleteError } = await supabaseClient
@@ -749,9 +767,8 @@ async function deleteTransaction(historyId, amount){
         return;
     }
 
+    // 削除分を逆算（借金データを消したら総額からマイナス、返却データを消したら総額へプラス）
     const { data: debtRow } = await supabaseClient.from("debt").select("total").eq("id", 1).single();
-    
-    // 消した金額分を逆算（借金(プラス)を消したらマイナス、返却(マイナス)を消したらプラスになる）
     await supabaseClient
         .from("debt")
         .update({ total: Number(debtRow.total) - Number(amount) })
