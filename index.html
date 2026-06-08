@@ -157,6 +157,13 @@ button:hover{
     transform: translateY(-1px);
 }
 
+button:disabled {
+    background: #2e3846 !important;
+    color: var(--text-muted) !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+}
+
 button.btn-secondary {
     background: #38414f;
     color: var(--text-color);
@@ -871,10 +878,12 @@ async function loadTotal(){
     }
 }
 
-// 📋 常に単一ソース（DBの最新状態）から履歴を全同期して上書き描画する関数
+// 📋 【改善】HTMLテーブル要素を一度完全に空（クリア）にしてから最新データを描き直す
 async function loadHistory(){
     if (!supabaseClient) return;
     const t = i18n[currentLang];
+    const tbody = document.getElementById("historyBody");
+    
     try {
         const { data, error } = await supabaseClient
             .from("history")
@@ -884,11 +893,15 @@ async function loadHistory(){
 
         if(error){ console.error(error); return; }
 
+        // 🟢 描画前に必ず中身を完全クリアして「古い残骸」を物理的に消し去る
+        tbody.innerHTML = "";
+
         let html = "";
         for(const row of data){
             let actionTdContent = "";
             if (isAdminLoggedIn) {
-                actionTdContent = `<button class="btn-danger" onclick="deleteTransaction('${row.id}')">${t.delete}</button>`;
+                // ボタンが連続で押されて破綻するのを防ぐため、クリック時に即座にボタンを無効化(disabled)する処理を追加
+                actionTdContent = `<button class="btn-danger" id="btn-del-${row.id}" onclick="deleteTransaction('${row.id}', this)">${t.delete}</button>`;
             }
 
             const isDebt = Number(row.amount) > 0;
@@ -896,20 +909,20 @@ async function loadHistory(){
             const amountPrefix = isDebt ? "+" : "";
 
             html += `
-            <tr>
+            <tr id="row-${row.id}">
                 <td>${row.date}</td>
                 <td><span class="${amountClass}">${amountPrefix}${Number(row.amount).toLocaleString()}${t.yen}</span></td>
                 <td>${row.reason || "-"}</td>
                 <td class="admin-only"><div class="action-buttons-wrap">${actionTdContent}</div></td>
             </tr>`;
         }
-        document.getElementById("historyBody").innerHTML = html;
+        tbody.innerHTML = html;
     } catch (e) {
         console.error(e);
     }
 }
 
-// ➕ 【単一ソース化】データを送信するだけ。画面更新処理はここでは呼び出さない
+// ➕ データを送信する処理
 async function addTransaction(){
     if (!supabaseClient) return;
     const t = i18n[currentLang];
@@ -926,17 +939,22 @@ async function addTransaction(){
 
     const finalAmount = type === "debt" ? rawAmount : -rawAmount;
 
+    // ボタンの連打防止
+    const saveBtn = document.getElementById("btnSaveTransaction");
+    saveBtn.disabled = true;
+
     const { error: insertError } = await supabaseClient
         .from("history")
         .insert([{ date, amount: finalAmount, reason }])
         .setHeaders({ "x-admin-password": globalAdminPassword });
+
+    saveBtn.disabled = false;
 
     if(insertError){
         showToast(t.toastAddFailed + insertError.message, "error");
         return;
     }
 
-    // フォーム入力欄のクリア処理のみ行う
     document.getElementById("amountInput").value = "";
     document.getElementById("reasonInput").value = "";
     if(type === "repay") {
@@ -947,14 +965,17 @@ async function addTransaction(){
     showToast(t.toastAdded);
 }
 
-// ➖ 【単一ソース化】データを削除するだけ。画面更新処理はここでは呼び出さない
-async function deleteTransaction(historyId){
+// ➖ 【改善】通信が走る瞬間にボタンを無効化し、さらに画面上からも即時非表示にする
+async function deleteTransaction(historyId, buttonElement){
     if (!supabaseClient) return;
     const t = i18n[currentLang];
     if (!isAdminLoggedIn) { showToast(t.toastNoAuth, "error"); return; }
 
     const confirmed = await showCustomConfirm(t.confirmDelete, true);
     if (!confirmed) return;
+
+    // 🟢 二重クリックによる計算破綻を防ぐため、ボタンを即使えなくする
+    if (buttonElement) buttonElement.disabled = true;
 
     const { error: deleteError } = await supabaseClient
         .from("history")
@@ -963,14 +984,21 @@ async function deleteTransaction(historyId){
         .setHeaders({ "x-admin-password": globalAdminPassword });
 
     if (deleteError) {
+        if (buttonElement) buttonElement.disabled = false;
         showToast(t.toastDeleteFailed + deleteError.message, "error");
         return;
+    }
+
+    // 🟢 リアルタイム通信のタイムラグを待たず、該当の行（tr）を画面のDOMから即時強制削除する
+    const targetRow = document.getElementById(`row-${historyId}`);
+    if (targetRow) {
+        targetRow.remove();
     }
 
     showToast(t.toastDeleted);
 }
 
-// ⚡ 【最重要】すべての更新をここに集約。変更イベントを検知したら無条件で0から再計算する
+// ⚡ すべての更新をここに集約。変更イベントを検知したら無条件で0から再計算する
 if (supabaseClient) {
     // 初回ロード
     loadTotal();
@@ -981,8 +1009,7 @@ if (supabaseClient) {
         .channel("history-realtime-global")
         .on("postgres_changes", { event: "*", schema: "public", table: "history" }, (payload) => { 
             console.log("リアルタイム変更検知:", payload.event);
-            // 命令の発火元が誰であるか、追加・削除のどちらであるかを一切問わず、
-            // 変更通知を受け取ったら、DBから今存在する生データを引き直して画面を上書きする
+            // 何らかの変更があった場合、DBの真実のデータから0ベースで全て再ロードして上書きする
             loadTotal(); 
             loadHistory();
         })
