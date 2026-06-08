@@ -623,7 +623,7 @@ const i18n = {
         adminLogin: "Admin-Login", enterPass: "Passwort eingeben", login: "Einloggen", addData: "Eintrag hinzufügen",
         lblType: "Art", debt: "Verliehen", repay: "Zurückgezahlt", required: "*Erforderlich", amountYen: "Betrag (Yen)", placeholderAmount: "z.B. 5000",
         reasonRequired: "*Erforderlich beim Verleihen", placeholderReason: "z.B. Mittagessen, Ticket", save: "Speichern",
-        cancel: "Abbrechen", confirm: "Bestätigen", yen: " ¥", delete: "Löschen",
+        cancel: "Abbrechen", confirm: "Best態igen", yen: " ¥", delete: "Löschen",
         toastLogin: "Erfolgreich eingeloggt", toastWrongPass: "Falsches Passwort", toastNoAuth: "Zugriff verweigert",
         toastInputDate: "Bitte ein Datum auswählen.", toastInputAmount: "Bitte einen gültigen Betrag eingeben.", toastInputReason: "Bitte einen Zweck angeben.",
         toastAdded: "Eintrag gespeichert.", toastAddFailed: "Fehler beim Speichern: ", toastDeleted: "Eintrag gelöscht.", toastDeleteFailed: "Fehler beim Löschen: ",
@@ -743,7 +743,6 @@ document.getElementById('typeInput').addEventListener('change', updateReasonLabe
 // --- configuration ---
 const CONFIG_URL = "https://cjbwqutwvymejgsdnjzf.supabase.co";
 const CONFIG_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqYndxdXR3dnltZWpnc2RuanpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3OTgyMjIsImV4cCI6MjA5NjM3NDIyMn0.C20QTlycDBvgfMjwAGaPQ1VLhlPj0iGA3C3xYi463bs";
-const ADMIN_PASSWORD = "zjhkanekaesanai";
 
 let supabaseClient = null;
 let isAdminLoggedIn = false; 
@@ -829,10 +828,12 @@ function toggleAdmin(){
     }
 }
 
-function loginAdmin(){
+async function loginAdmin(){
     const pass = document.getElementById("adminPassword").value;
     const t = i18n[currentLang];
-    if(pass === ADMIN_PASSWORD){
+    
+    // パスワードの検証は仮ログインとして通し、実際のデータベース操作時にRPC側で厳密にチェックします
+    if(pass.trim() !== ""){
         isAdminLoggedIn = true;
         document.body.classList.add("is-admin"); 
         document.getElementById("adminControls").style.display = "block";
@@ -924,6 +925,7 @@ async function addTransaction(){
     const date = document.getElementById("dateInput").value;
     const rawAmount = Number(document.getElementById("amountInput").value);
     const reason = document.getElementById("reasonInput").value;
+    const pass = document.getElementById("adminPassword").value;
 
     if (!date) {
         showToast(t.toastInputDate, "error");
@@ -940,17 +942,18 @@ async function addTransaction(){
 
     const finalAmount = type === "debt" ? rawAmount : -rawAmount;
 
-    const { error: insertError } = await supabaseClient
-        .from("history")
-        .insert([{ date, amount: finalAmount, reason }]);
+    // テーブル直接ではなく、SQLエディタで作成したセキュアな関数を呼び出し
+    const { error: rpcError } = await supabaseClient.rpc('add_transaction_secure', {
+        input_password: pass,
+        t_date: date,
+        t_amount: finalAmount,
+        t_reason: reason
+    });
 
-    if(insertError){
-        showToast(t.toastAddFailed + insertError.message, "error");
+    if(rpcError){
+        showToast(t.toastWrongPass, "error");
         return;
     }
-
-    const { data: debtRow } = await supabaseClient.from("debt").select("total").eq("id", 1).single();
-    await supabaseClient.from("debt").update({ total: Number(debtRow.total) + finalAmount }).eq("id", 1);
 
     document.getElementById("amountInput").value = "";
     document.getElementById("reasonInput").value = "";
@@ -976,21 +979,19 @@ async function deleteTransaction(historyId, amount){
     const confirmed = await showCustomConfirm(t.confirmDelete, true);
     if (!confirmed) return;
 
-    const { error: deleteError } = await supabaseClient
-        .from("history")
-        .delete()
-        .eq("id", historyId);
+    const pass = document.getElementById("adminPassword").value;
 
-    if (deleteError) {
-        showToast(t.toastDeleteFailed + deleteError.message, "error");
+    // テーブル直接ではなく、SQLエディタで作成したセキュアな関数を呼び出し
+    const { error: rpcError } = await supabaseClient.rpc('delete_transaction_secure', {
+        input_password: pass,
+        history_id: historyId,
+        t_amount: amount
+    });
+
+    if (rpcError) {
+        showToast(t.toastWrongPass, "error");
         return;
     }
-
-    const { data: debtRow } = await supabaseClient.from("debt").select("total").eq("id", 1).single();
-    await supabaseClient
-        .from("debt")
-        .update({ total: Number(debtRow.total) - Number(amount) })
-        .eq("id", 1);
 
     await loadTotal();
     await loadHistory();
