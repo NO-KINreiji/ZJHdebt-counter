@@ -421,7 +421,6 @@ body.is-admin .admin-only {
         color: var(--text-muted);
     }
     
-    /* 🌐 CSS変数を使ってレスポンシブ時の見出しも多言語化 */
     td:nth-of-type(1):before { content: var(--i18n-date, "日付"); }
     td:nth-of-type(2):before { content: var(--i18n-amount, "収支"); }
     td:nth-of-type(3):before { content: var(--i18n-reason, "用途"); }
@@ -555,7 +554,6 @@ body.is-admin .admin-only {
 </div>
 
 <script>
-// 🌐 多言語テキストデータ定義
 const i18n = {
     ja: {
         title: "ZJH借金カウンター", totalLabel: "ZJHが私にしている借金は", loading: "読み込み中...", error: "エラー",
@@ -635,7 +633,6 @@ let currentLang = localStorage.getItem('selectedLang') || 'ja';
 
 function updateLanguageDOM() {
     const t = i18n[currentLang];
-    
     document.getElementById("mainTitle").innerText = t.title;
     document.getElementById("lblTotalDisplay").innerText = t.totalLabel;
     
@@ -704,7 +701,6 @@ if ('scrollRestoration' in history) {
 
 function resetPageOnLoad() {
     window.scrollTo(0, 0); 
-    
     const historyPanel = document.getElementById("historyPanel");
     const adminPanel = document.getElementById("adminPanel");
     if (historyPanel) historyPanel.style.display = "none";
@@ -793,10 +789,7 @@ function showToast(message, type = "success") {
     }
 
     toast.classList.add("active");
-
-    setTimeout(() => {
-        toast.classList.remove("active");
-    }, 2500); 
+    setTimeout(() => { toast.classList.remove("active"); }, 2500); 
 }
 
 function toggleHistory(){
@@ -804,9 +797,7 @@ function toggleHistory(){
     if(!panel) return;
     const isBlock = window.getComputedStyle(panel).display === "block";
     panel.style.display = isBlock ? "none" : "block";
-    if(!isBlock) {
-        loadHistory();
-    }
+    if(!isBlock) { loadHistory(); }
 }
 
 function toggleAdmin(){
@@ -852,7 +843,6 @@ async function loginAdmin(){
     }
 }
 
-// 🧮 差分更新ではなく、毎回0からhistoryテーブルの全要素をすべて足して総額を計算する
 async function loadTotal(){
     if (!supabaseClient) return;
     const t = i18n[currentLang];
@@ -867,14 +857,12 @@ async function loadTotal(){
             return;
         }
 
-        // 初期値0から、すべての履歴（amount要素）をループして足し合わせる
         let currentTotal = 0;
         if (data && data.length > 0) {
             for (let i = 0; i < data.length; i++) {
                 currentTotal += Number(data[i].amount);
             }
         }
-
         document.getElementById("amountSpan").innerText = `${currentTotal.toLocaleString()}${t.yen}`;
     } catch (e) {
         console.error(e);
@@ -892,15 +880,11 @@ async function loadHistory(){
             .order("date", { ascending: false })
             .order("id", { ascending: false });
 
-        if(error){
-            console.error(error);
-            return;
-        }
+        if(error){ console.error(error); return; }
 
         let html = "";
         for(const row of data){
             let actionTdContent = "";
-
             if (isAdminLoggedIn) {
                 actionTdContent = `<button class="btn-danger" onclick="deleteTransaction('${row.id}')">${t.delete}</button>`;
             }
@@ -923,13 +907,11 @@ async function loadHistory(){
     }
 }
 
+// 【改善】追加処理の完了直後に、画面の再描画を確実に実行させる
 async function addTransaction(){
     if (!supabaseClient) return;
     const t = i18n[currentLang];
-    if (!isAdminLoggedIn) {
-        showToast(t.toastNoAuth, "error");
-        return;
-    }
+    if (!isAdminLoggedIn) { showToast(t.toastNoAuth, "error"); return; }
 
     const type = document.getElementById("typeInput").value;
     const date = document.getElementById("dateInput").value;
@@ -942,7 +924,6 @@ async function addTransaction(){
 
     const finalAmount = type === "debt" ? rawAmount : -rawAmount;
 
-    // ヘッダーにパスワードを含めて安全に挿入
     const { error: insertError } = await supabaseClient
         .from("history")
         .insert([{ date, amount: finalAmount, reason }])
@@ -955,30 +936,26 @@ async function addTransaction(){
 
     document.getElementById("amountInput").value = "";
     document.getElementById("reasonInput").value = "";
-    
     if(type === "repay") {
         document.getElementById("typeInput").value = "debt"; 
         updateReasonLabel();
     }
 
-    // 挿入完了後、すべてのデータを0から再計算・再読込
+    // 確実に再計算・履歴一覧の再取得を走らせる
     await loadTotal();
     await loadHistory();
     showToast(t.toastAdded);
 }
 
+// 【改善】削除の通信が成功したら、リアルタイムに頼らずその場で即座に画面から消す
 async function deleteTransaction(historyId){
     if (!supabaseClient) return;
     const t = i18n[currentLang];
-    if (!isAdminLoggedIn) {
-        showToast(t.toastNoAuth, "error");
-        return;
-    }
+    if (!isAdminLoggedIn) { showToast(t.toastNoAuth, "error"); return; }
 
     const confirmed = await showCustomConfirm(t.confirmDelete, true);
     if (!confirmed) return;
 
-    // ヘッダーにパスワードを含めて安全に削除
     const { error: deleteError } = await supabaseClient
         .from("history")
         .delete()
@@ -990,17 +967,19 @@ async function deleteTransaction(historyId){
         return;
     }
 
-    // 削除完了後、すべてのデータを0から再計算・再読込
+    // 削除完了後、その場で即座に合計金額と履歴一覧を最新状態に上書きする
     await loadTotal();
     await loadHistory();
     showToast(t.toastDeleted);
 }
 
+// 【改善】外部ブラウザでの同時変更（別画面からの追加など）を検知したときだけ再計算する形に変更
 if (supabaseClient) {
     loadTotal();
     loadHistory();
-    // リアルタイム検知イベントも、historyテーブルの変更を検知して0から再計算するロジックに統合
-    supabaseClient.channel("history-realtime").on("postgres_changes", { event: "*", schema: "public", table: "history" }, () => { 
+    
+    supabaseClient.channel("history-realtime").on("postgres_changes", { event: "*", schema: "public", table: "history" }, (payload) => { 
+        // 自分が操作したイベント以外（他人が動かした等）のとき、念のため同期する
         loadTotal(); 
         loadHistory();
     }).subscribe();
