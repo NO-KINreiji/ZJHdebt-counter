@@ -35,7 +35,6 @@ body{
     overflow-x: hidden; 
 }
 
-/* 🌐 言語セレクターの配置設定 */
 .lang-selector {
     position: fixed;
     top: 20px;
@@ -134,7 +133,6 @@ h2 {
     word-break: break-all;
 }
 
-/* ボタン共通設定 */
 button{
     border: none;
     border-radius: 12px;
@@ -187,7 +185,6 @@ button.btn-danger:hover {
     flex-wrap: wrap; 
 }
 
-/* 入力欄設定 */
 input, select{
     width: 100%;
     max-width: 100%;
@@ -212,7 +209,6 @@ input:focus, select:focus {
     border-color: var(--accent-color);
 }
 
-/* パネル設定 */
 .panel{
     background: var(--panel-bg);
     border-radius: 20px;
@@ -235,7 +231,6 @@ input:focus, select:focus {
     border-top: 1px solid #38414f;
 }
 
-/* テーブル設計 */
 .history-container{
     margin-top: 15px;
     border-radius: 12px;
@@ -262,7 +257,7 @@ th {
 
 tr {
     border-bottom: 1px solid #38414f;
-    transition: opacity 0.3s ease; /* 削除時のアニメーション用 */
+    transition: opacity 0.3s ease;
 }
 
 tr:last-child {
@@ -292,7 +287,6 @@ body.is-admin .admin-only {
     display: table-cell !important;
 }
 
-/* 自作カスタム確認ダイアログ */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -339,7 +333,6 @@ body.is-admin .admin-only {
     justify-content: center;
 }
 
-/* トースト通知 */
 .toast-container {
     position: fixed;
     top: -100px; 
@@ -367,7 +360,6 @@ body.is-admin .admin-only {
     opacity: 1;
 }
 
-/* スマートフォン向けの完全レスポンシブ調整 */
 @media(max-width: 650px) {
     body { padding: 16px 12px; }
     .container { margin: 10px auto; }
@@ -717,6 +709,8 @@ function resetPageOnLoad() {
     isAdminLoggedIn = false;
     globalAdminPassword = "";
     document.body.classList.remove("is-admin");
+    document.getElementById("adminControls").style.display = "none";
+    document.getElementById("adminPassword").value = ""; 
     updateLanguageDOM(); 
 }
 
@@ -741,7 +735,7 @@ function updateReasonLabel() {
 
 document.getElementById('typeInput').addEventListener('change', updateReasonLabel);
 
-// --- configuration ---
+// --- Supabase 設定 ---
 const CONFIG_URL = "https://cjbwqutwvymejgsdnjzf.supabase.co";
 const CONFIG_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqYndxdXR3dnltZWpnc2RuanpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3OTgyMjIsImV4cCI6MjA5NjM3NDIyMn0.C20QTlycDBvgfMjwAGaPQ1VLhlPj0iGA3C3xYi463bs";
 
@@ -919,6 +913,7 @@ async function loadHistory(){
     }
 }
 
+// 🌟 【修正】追加処理のヘッダー指定方法とエラーハンドリングの改善
 async function addTransaction(){
     if (!supabaseClient) return;
     const t = i18n[currentLang];
@@ -938,29 +933,35 @@ async function addTransaction(){
     const saveBtn = document.getElementById("btnSaveTransaction");
     saveBtn.disabled = true;
 
-    const { error: insertError } = await supabaseClient
-        .from("history")
-        .insert([{ date, amount: finalAmount, reason }])
-        .setHeaders({ "x-admin-password": globalAdminPassword });
+    try {
+        // .setHeader(キー, 値) に修正
+        const { error: insertError } = await supabaseClient
+            .from("history")
+            .insert([{ date, amount: finalAmount, reason }])
+            .setHeader("x-admin-password", globalAdminPassword);
 
-    saveBtn.disabled = false;
+        if(insertError){
+            showToast(t.toastAddFailed + insertError.message, "error");
+            return;
+        }
 
-    if(insertError){
-        showToast(t.toastAddFailed + insertError.message, "error");
-        return;
+        document.getElementById("amountInput").value = "";
+        document.getElementById("reasonInput").value = "";
+        if(type === "repay") {
+            document.getElementById("typeInput").value = "debt"; 
+            updateReasonLabel();
+        }
+
+        showToast(t.toastAdded);
+    } catch(e) {
+        console.error("追加エラー:", e);
+        showToast(t.toastAddFailed + e.message, "error");
+    } finally {
+        saveBtn.disabled = false;
     }
-
-    document.getElementById("amountInput").value = "";
-    document.getElementById("reasonInput").value = "";
-    if(type === "repay") {
-        document.getElementById("typeInput").value = "debt"; 
-        updateReasonLabel();
-    }
-
-    showToast(t.toastAdded);
 }
 
-// ➖ 【抜本的改善】データベースへの削除リクエスト後、通信成功の時点で画面の表から強制的に物理削除する
+// 🌟 【修正】削除処理のヘッダー指定方法とエラーハンドリングの改善
 async function deleteTransaction(historyId, buttonElement){
     if (!supabaseClient) return;
     const t = i18n[currentLang];
@@ -969,58 +970,53 @@ async function deleteTransaction(historyId, buttonElement){
     const confirmed = await showCustomConfirm(t.confirmDelete, true);
     if (!confirmed) return;
 
-    // 二重クリック防止：ボタンを即座に無効化
     if (buttonElement) buttonElement.disabled = true;
     
-    // 見た目上だけ先に半透明にして「処理中」感を出しておく
     const targetRow = document.getElementById(`row-${historyId}`);
     if (targetRow) targetRow.style.opacity = "0.5";
 
-    const { error: deleteError } = await supabaseClient
-        .from("history")
-        .delete()
-        .eq("id", historyId)
-        .setHeaders({ "x-admin-password": globalAdminPassword });
+    try {
+        // .setHeader(キー, 値) に修正
+        const { error: deleteError } = await supabaseClient
+            .from("history")
+            .delete()
+            .eq("id", historyId)
+            .setHeader("x-admin-password", globalAdminPassword);
 
-    if (deleteError) {
+        if (deleteError) {
+            showToast(t.toastDeleteFailed + deleteError.message, "error");
+            if (buttonElement) buttonElement.disabled = false;
+            if (targetRow) targetRow.style.opacity = "1";
+            return;
+        }
+
+        if (targetRow) targetRow.remove();
+        showToast(t.toastDeleted);
+        loadTotal();
+    } catch(e) {
+        console.error("削除エラー:", e);
+        showToast(t.toastDeleteFailed + e.message, "error");
         if (buttonElement) buttonElement.disabled = false;
         if (targetRow) targetRow.style.opacity = "1";
-        showToast(t.toastDeleteFailed + deleteError.message, "error");
-        return;
     }
-
-    // 🌟 データベースの削除に成功したら、履歴を再取得（loadHistory）するのではなく、
-    // 今ここにある要素を DOM から直接抹消する。これで「ゾンビ化」を完全に防ぐ。
-    if (targetRow) targetRow.remove();
-    showToast(t.toastDeleted);
-    
-    // 要素が消えたので、合計金額だけを再計算させる
-    loadTotal();
 }
 
 if (supabaseClient) {
-    // 初回ロード
     loadTotal();
     loadHistory();
     
-    // ⚡ 【抜本的改善】リアルタイム通信の挙動を変更
-    // INSERT（追加）の時だけ一覧を再取得し、DELETE（削除）の時は絶対に再取得しない。
     supabaseClient
         .channel("history-realtime-global")
         .on("postgres_changes", { event: "INSERT", schema: "public", table: "history" }, (payload) => { 
-            // 追加時は最新データを取り直す
             loadTotal(); 
             loadHistory();
         })
         .on("postgres_changes", { event: "DELETE", schema: "public", table: "history" }, (payload) => { 
-            // 🌟 削除検知時は、絶対に loadHistory() を呼ばない！
-            // 別の端末から削除された場合を想定し、通知されたIDを持つ行だけを直接消す。
             const deletedId = payload.old?.id;
             if (deletedId) {
                 const row = document.getElementById(`row-${deletedId}`);
                 if (row) row.remove();
             }
-            // 少し遅延させて合計金額だけ更新（DBの反映を確実に待つため）
             setTimeout(loadTotal, 500);
         })
         .subscribe();
