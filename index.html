@@ -262,6 +262,7 @@ th {
 
 tr {
     border-bottom: 1px solid #38414f;
+    transition: opacity 0.3s ease; /* 削除時のアニメーション用 */
 }
 
 tr:last-child {
@@ -291,7 +292,7 @@ body.is-admin .admin-only {
     display: table-cell !important;
 }
 
-/* 自作カスタム確認ダイアログ(モーダル) */
+/* 自作カスタム確認ダイアログ */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -850,7 +851,6 @@ async function loginAdmin(){
     }
 }
 
-// 🧮 常に単一ソース（DBの全要素）から0ベースで合計値を集計する関数
 async function loadTotal(){
     if (!supabaseClient) return;
     const t = i18n[currentLang];
@@ -878,7 +878,6 @@ async function loadTotal(){
     }
 }
 
-// 📋 【改善】HTMLテーブル要素を一度完全に空（クリア）にしてから最新データを描き直す
 async function loadHistory(){
     if (!supabaseClient) return;
     const t = i18n[currentLang];
@@ -893,14 +892,12 @@ async function loadHistory(){
 
         if(error){ console.error(error); return; }
 
-        // 🟢 描画前に必ず中身を完全クリアして「古い残骸」を物理的に消し去る
         tbody.innerHTML = "";
 
         let html = "";
         for(const row of data){
             let actionTdContent = "";
             if (isAdminLoggedIn) {
-                // ボタンが連続で押されて破綻するのを防ぐため、クリック時に即座にボタンを無効化(disabled)する処理を追加
                 actionTdContent = `<button class="btn-danger" id="btn-del-${row.id}" onclick="deleteTransaction('${row.id}', this)">${t.delete}</button>`;
             }
 
@@ -922,7 +919,6 @@ async function loadHistory(){
     }
 }
 
-// ➕ データを送信する処理
 async function addTransaction(){
     if (!supabaseClient) return;
     const t = i18n[currentLang];
@@ -939,7 +935,6 @@ async function addTransaction(){
 
     const finalAmount = type === "debt" ? rawAmount : -rawAmount;
 
-    // ボタンの連打防止
     const saveBtn = document.getElementById("btnSaveTransaction");
     saveBtn.disabled = true;
 
@@ -965,7 +960,7 @@ async function addTransaction(){
     showToast(t.toastAdded);
 }
 
-// ➖ 【改善】通信が走る瞬間にボタンを無効化し、さらに画面上からも即時非表示にする
+// ➖ 【抜本的改善】データベースへの削除リクエスト後、通信成功の時点で画面の表から強制的に物理削除する
 async function deleteTransaction(historyId, buttonElement){
     if (!supabaseClient) return;
     const t = i18n[currentLang];
@@ -974,8 +969,12 @@ async function deleteTransaction(historyId, buttonElement){
     const confirmed = await showCustomConfirm(t.confirmDelete, true);
     if (!confirmed) return;
 
-    // 🟢 二重クリックによる計算破綻を防ぐため、ボタンを即使えなくする
+    // 二重クリック防止：ボタンを即座に無効化
     if (buttonElement) buttonElement.disabled = true;
+    
+    // 見た目上だけ先に半透明にして「処理中」感を出しておく
+    const targetRow = document.getElementById(`row-${historyId}`);
+    if (targetRow) targetRow.style.opacity = "0.5";
 
     const { error: deleteError } = await supabaseClient
         .from("history")
@@ -985,33 +984,44 @@ async function deleteTransaction(historyId, buttonElement){
 
     if (deleteError) {
         if (buttonElement) buttonElement.disabled = false;
+        if (targetRow) targetRow.style.opacity = "1";
         showToast(t.toastDeleteFailed + deleteError.message, "error");
         return;
     }
 
-    // 🟢 リアルタイム通信のタイムラグを待たず、該当の行（tr）を画面のDOMから即時強制削除する
-    const targetRow = document.getElementById(`row-${historyId}`);
-    if (targetRow) {
-        targetRow.remove();
-    }
-
+    // 🌟 データベースの削除に成功したら、履歴を再取得（loadHistory）するのではなく、
+    // 今ここにある要素を DOM から直接抹消する。これで「ゾンビ化」を完全に防ぐ。
+    if (targetRow) targetRow.remove();
     showToast(t.toastDeleted);
+    
+    // 要素が消えたので、合計金額だけを再計算させる
+    loadTotal();
 }
 
-// ⚡ すべての更新をここに集約。変更イベントを検知したら無条件で0から再計算する
 if (supabaseClient) {
     // 初回ロード
     loadTotal();
     loadHistory();
     
-    // リアルタイムリスナー設定
+    // ⚡ 【抜本的改善】リアルタイム通信の挙動を変更
+    // INSERT（追加）の時だけ一覧を再取得し、DELETE（削除）の時は絶対に再取得しない。
     supabaseClient
         .channel("history-realtime-global")
-        .on("postgres_changes", { event: "*", schema: "public", table: "history" }, (payload) => { 
-            console.log("リアルタイム変更検知:", payload.event);
-            // 何らかの変更があった場合、DBの真実のデータから0ベースで全て再ロードして上書きする
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "history" }, (payload) => { 
+            // 追加時は最新データを取り直す
             loadTotal(); 
             loadHistory();
+        })
+        .on("postgres_changes", { event: "DELETE", schema: "public", table: "history" }, (payload) => { 
+            // 🌟 削除検知時は、絶対に loadHistory() を呼ばない！
+            // 別の端末から削除された場合を想定し、通知されたIDを持つ行だけを直接消す。
+            const deletedId = payload.old?.id;
+            if (deletedId) {
+                const row = document.getElementById(`row-${deletedId}`);
+                if (row) row.remove();
+            }
+            // 少し遅延させて合計金額だけ更新（DBの反映を確実に待つため）
+            setTimeout(loadTotal, 500);
         })
         .subscribe();
 }
