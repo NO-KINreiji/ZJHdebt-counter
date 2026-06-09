@@ -42,7 +42,7 @@ body {
     padding: 40px 20px;
 }
 
-/* 🌐 言語セレクター（どの画面幅でも適切な位置に固定） */
+/* 🌐 言語セレクター */
 .lang-selector {
     position: fixed;
     top: 20px;
@@ -93,7 +93,7 @@ body {
     background: #38414f;
 }
 
-/* 🌟 コンテナ幅を最大900pxにし、PC・タブレット・スマホで最適な余白を維持 */
+/* 🌟 コンテナ幅を最大900pxにし、最適な余白を維持 */
 .container {
     max-width: 900px;
     margin: 40px auto;
@@ -242,7 +242,7 @@ input:focus, select:focus {
     border-top: 1px solid #38414f;
 }
 
-/* 🌟 PC・タブレット用の標準テーブル設計 */
+/* テーブル設計 */
 .history-container {
     margin-top: 20px;
     border-radius: 14px;
@@ -254,21 +254,20 @@ input:focus, select:focus {
 table {
     width: 100%;
     border-collapse: collapse;
-    table-layout: fixed; /* 横幅を固定してはみ出しを防止 */
+    table-layout: fixed;
 }
 
 th, td {
     padding: 18px;
     text-align: left;
     font-size: 16px;
-    word-break: break-all; /* 長いテキストの自動改行 */
+    word-break: break-all;
 }
 
-/* 各列の幅をPC・タブレット用に固定指定 */
-th:nth-child(1), td:nth-child(1) { width: 25%; } /* 日付 */
-th:nth-child(2), td:nth-child(2) { width: 25%; } /* 収支 */
-th:nth-child(3), td:nth-child(3) { width: 35%; } /* 用途 */
-th:nth-child(4), td:nth-child(4) { width: 15%; } /* 操作 */
+th:nth-child(1), td:nth-child(1) { width: 25%; }
+th:nth-child(2), td:nth-child(2) { width: 25%; }
+th:nth-child(3), td:nth-child(3) { width: 35%; }
+th:nth-child(4), td:nth-child(4) { width: 15%; }
 
 th {
     background: #1a1e24;
@@ -383,7 +382,6 @@ body.is-admin .admin-only {
     opacity: 1;
 }
 
-/* 🌟 【レスポンシブ】タブレット環境向け調整（幅1024px以下） */
 @media(max-width: 1024px) {
     body { padding: 30px 20px; }
     .container { margin: 20px auto; }
@@ -391,7 +389,6 @@ body.is-admin .admin-only {
     th, td { padding: 14px; font-size: 15px; }
 }
 
-/* 🌟 【レスポンシブ】スマートフォン向け調整（幅680px以下） */
 @media(max-width: 680px) {
     body { padding: 16px 12px; }
     .container { margin: 10px auto; }
@@ -408,15 +405,8 @@ body.is-admin .admin-only {
         border-radius: 20px;
     }
     
-    /* スマホ時はテーブルをカード型のブロック形式に変形して横スクロールを徹底排除 */
-    table, thead, tbody, th, td, tr { 
-        display: block; 
-    }
-    thead tr { 
-        position: absolute; 
-        top: -9999px; 
-        left: -9999px; 
-    }
+    table, thead, tbody, th, td, tr { display: block; }
+    thead tr { position: absolute; top: -9999px; left: -9999px; }
     tr { 
         border: 1px solid #38414f; 
         border-radius: 14px; 
@@ -433,7 +423,7 @@ body.is-admin .admin-only {
         padding-bottom: 12px;
         border-bottom: 1px solid #252b35;
         min-height: 45px;
-        width: 100% !important; /* 固定幅指定を解除 */
+        width: 100% !important; 
     }
     td:last-child {
         border-bottom: none;
@@ -456,9 +446,7 @@ body.is-admin .admin-only {
     td:nth-of-type(3):before { content: var(--i18n-reason, "用途"); }
     td:nth-of-type(4):before { content: var(--i18n-action, "操作"); }
     
-    body.is-admin .admin-only {
-        display: block !important;
-    }
+    body.is-admin .admin-only { display: block !important; }
 
     td .action-buttons-wrap {
         display: flex;
@@ -475,25 +463,16 @@ body.is-admin .admin-only {
         justify-content: center;
     }
     
-    .button-group button {
-        width: 100%; 
-    }
-
-    .modal-buttons {
-        flex-direction: column-reverse; 
-    }
-    .modal-buttons button {
-        width: 100%;
-    }
+    .button-group button { width: 100%; }
+    .modal-buttons { flex-direction: column-reverse; }
+    .modal-buttons button { width: 100%; }
     
     .toast-container {
         font-size: 15px;
         padding: 14px 24px;
         min-width: auto;
     }
-    .toast-container.active {
-        top: 15px; 
-    }
+    .toast-container.active { top: 15px; }
 }
 </style>
 </head>
@@ -546,8 +525,16 @@ body.is-admin .admin-only {
 
     <div id="adminPanel" class="panel" style="display: none;">
         <h2 id="adminLoginTitle">管理者ログイン</h2>
-        <input type="password" id="adminPassword" placeholder="パスワードを入力してください">
-        <button id="btnLogin" onclick="loginAdmin()">ログイン</button>
+        
+        <div id="loginStep1">
+            <input type="email" id="adminEmail" placeholder="メールアドレスを入力してください">
+            <button id="btnSendOtp" onclick="sendAdminOtp()">確認コードを送信</button>
+        </div>
+
+        <div id="loginStep2" style="display: none;">
+            <input type="text" id="adminOtp" placeholder="6桁の確認コード">
+            <button id="btnLogin" onclick="verifyAdminOtp()">ログイン</button>
+        </div>
 
         <div id="adminControls">
             <h2 id="adminControlsTitle">データ追加</h2>
@@ -584,15 +571,16 @@ body.is-admin .admin-only {
 </div>
 
 <script>
+// UIを壊さないよう、OTP用テキストも各言語に追加しました
 const i18n = {
     ja: {
         title: "ZJH借金カウンター", totalLabel: "ZJHが私にしている借金は", loading: "読み込み中...", error: "エラー",
         btnHistory: "内訳確認", btnAdmin: "管理者モード", historyTitle: "履歴一覧", thDate: "日付", thAmount: "収支", thReason: "用途", thAction: "操作",
-        adminLogin: "管理者ログイン", enterPass: "パスワードを入力してください", login: "ログイン", addData: "データ追加",
+        adminLogin: "管理者ログイン", enterEmail: "メールアドレスを入力してください", sendOtp: "確認コードを送信", enterOtp: "6桁の確認コード", login: "ログイン", addData: "データ追加",
         lblType: "種類", debt: "借金", repay: "返済", required: "*必須", amountYen: "金額 (円)", placeholderAmount: "例: 5000",
         reasonRequired: "*借金時は必須", placeholderReason: "例: クレーンゲーム代、自転車の駐輪代", save: "保存する",
         cancel: "キャンセル", confirm: "確定", yen: "円", delete: "削除",
-        toastLogin: "管理者としてログインしました", toastWrongPass: "パスワードが違います", toastNoAuth: "権限がありません",
+        toastLogin: "管理者としてログインしました", toastWrongOtp: "コードが間違っているか、期限切れです", toastNoAuth: "権限がありません",
         toastInputDate: "日付を選択してください", toastInputAmount: "正しい金額を入力してください", toastInputReason: "借金の場合は用途を入力してください",
         toastAdded: "データを追加命令を送信しました", toastAddFailed: "追加に失敗しました: ", toastDeleted: "データを削除命令を送信しました", toastDeleteFailed: "削除に失敗しました: ",
         confirmDelete: "本当にこのデータを削除しますか？\n（※全体の借金総額も自動的に再計算されます）"
@@ -600,11 +588,11 @@ const i18n = {
     en: {
         title: "ZJH Debt Tracker", totalLabel: "Total amount ZJH owes me:", loading: "Loading...", error: "Error",
         btnHistory: "View History", btnAdmin: "Admin Mode", historyTitle: "Transaction History", thDate: "Date", thAmount: "Amount", thReason: "Reason", thAction: "Action",
-        adminLogin: "Admin Login", enterPass: "Enter password", login: "Log In", addData: "Add Transaction",
+        adminLogin: "Admin Login", enterEmail: "Enter your email", sendOtp: "Send OTP", enterOtp: "6-digit OTP", login: "Log In", addData: "Add Transaction",
         lblType: "Type", debt: "Borrow", repay: "Repay", required: "*Required", amountYen: "Amount (Yen)", placeholderAmount: "e.g., 5000",
         reasonRequired: "*Required for new debts", placeholderReason: "e.g., Crane game, lunch", save: "Save",
         cancel: "Cancel", confirm: "Confirm", yen: " Yen", delete: "Delete",
-        toastLogin: "Logged in successfully", toastWrongPass: "Incorrect password", toastNoAuth: "Access denied",
+        toastLogin: "Logged in successfully", toastWrongOtp: "Invalid or expired code", toastNoAuth: "Access denied",
         toastInputDate: "Please select a date.", toastInputAmount: "Please enter a valid amount.", toastInputReason: "Please enter a reason for the debt.",
         toastAdded: "Sent insert command.", toastAddFailed: "Failed to add: ", toastDeleted: "Sent delete command.", toastDeleteFailed: "Failed to delete: ",
         confirmDelete: "Are you sure you want to delete this record?\n(The total balance will be recalculated automatically.)"
@@ -612,11 +600,11 @@ const i18n = {
     zh: {
         title: "ZJH 欠款记账本", totalLabel: "ZJH 当前总共欠我：", loading: "加载中...", error: "出错了",
         btnHistory: "查看记录", btnAdmin: "管理员模式", historyTitle: "收支明细", thDate: "日期", thAmount: "金额", thReason: "用途", thAction: "操作",
-        adminLogin: "管理员登录", enterPass: "请输入密码", login: "登录", addData: "添加记录",
+        adminLogin: "管理员登录", enterEmail: "请输入邮箱", sendOtp: "发送验证码", enterOtp: "6位验证码", login: "登录", addData: "添加记录",
         lblType: "类型", debt: "借出", repay: "归还", required: "*必填", amountYen: "金额 (日元)", placeholderAmount: "例: 5000",
         reasonRequired: "*借出时必填", placeholderReason: "例: 抓娃娃机、午餐费", save: "保存",
         cancel: "取消", confirm: "确定", yen: "日元", delete: "删除",
-        toastLogin: "登录成功", toastWrongPass: "密码错误", toastNoAuth: "无权限操作",
+        toastLogin: "登录成功", toastWrongOtp: "验证码错误或已过期", toastNoAuth: "无权限操作",
         toastInputDate: "请选择日期", toastInputAmount: "请输入有效金额", toastInputReason: "借出时请填写用途",
         toastAdded: "添加指令已发送", toastAddFailed: "添加失败: ", toastDeleted: "删除指令已发送", toastDeleteFailed: "删除失败: ",
         confirmDelete: "确定要删除这条记录吗？\n（总欠款金额将自动重新计算）"
@@ -624,11 +612,11 @@ const i18n = {
     es: {
         title: "Registro de Deudas ZJH", totalLabel: "ZJH me debe en total:", loading: "Cargando...", error: "Error",
         btnHistory: "Ver Historial", btnAdmin: "Modo Admin", historyTitle: "Historial de Movimientos", thDate: "Fecha", thAmount: "Monto", thReason: "Concepto", thAction: "Acción",
-        adminLogin: "Acceso Administrador", enterPass: "Introduce la contraseña", login: "Entrar", addData: "Añadir Movimiento",
+        adminLogin: "Acceso Administrador", enterEmail: "Introduce tu correo", sendOtp: "Enviar Código", enterOtp: "Código de 6 dígitos", login: "Entrar", addData: "Añadir Movimiento",
         lblType: "Tipo", debt: "Préstamo", repay: "Reembolso", required: "*Obligatorio", amountYen: "Monto (Yenes)", placeholderAmount: "ej: 5000",
         reasonRequired: "*Obligatorio para préstamos", placeholderReason: "ej: Comida, transporte", save: "Guardar",
         cancel: "Cancelar", confirm: "Confirmar", yen: " ¥", delete: "Eliminar",
-        toastLogin: "Sesión iniciada correctamente", toastWrongPass: "Contraseña incorrecta", toastNoAuth: "Acceso denegado",
+        toastLogin: "Sesión iniciada correctamente", toastWrongOtp: "Código incorrecto o caducado", toastNoAuth: "Acceso denegado",
         toastInputDate: "Por favor, selecciona una fecha.", toastInputAmount: "Por favor, introduce un monto válido.", toastInputReason: "El concepto es obligatorio para los préstamos.",
         toastAdded: "Comando de inserción enviado.", toastAddFailed: "Error al guardar: ", toastDeleted: "Comando de eliminación enviado.", toastDeleteFailed: "Error al eliminar: ",
         confirmDelete: "¿Seguro que quieres eliminar este registro?\n(El balance total se recalculará automáticamente.)"
@@ -636,11 +624,11 @@ const i18n = {
     fr: {
         title: "Suivi des Dettes ZJH", totalLabel: "ZJH me doit au total :", loading: "Chargement...", error: "Erreur",
         btnHistory: "Voir l'historique", btnAdmin: "Mode Admin", historyTitle: "Historique des transactions", thDate: "Date", thAmount: "Montant", thReason: "Motif", thAction: "Action",
-        adminLogin: "Connexion Admin", enterPass: "Entrez le mot de passe", login: "Se connecter", addData: "Ajouter une transaction",
+        adminLogin: "Connexion Admin", enterEmail: "Entrez votre email", sendOtp: "Envoyer le code", enterOtp: "Code à 6 chiffres", login: "Se connecter", addData: "Ajouter une transaction",
         lblType: "Type", debt: "Prêt", repay: "Remboursement", required: "*Requis", amountYen: "Montant (Yens)", placeholderAmount: "ex: 5000",
         reasonRequired: "*Requis pour un prêt", placeholderReason: "ex: Déjeuner, transport", save: "Enregistrer",
         cancel: "Annuler", confirm: "Confirmer", yen: " ¥", delete: "Supprimer",
-        toastLogin: "Connexion réussie", toastWrongPass: "Mot de passe incorrect", toastNoAuth: "Accès refusé",
+        toastLogin: "Connexion réussie", toastWrongOtp: "Code invalide ou expiré", toastNoAuth: "Accès refusé",
         toastInputDate: "Veuillez sélectionner une date.", toastInputAmount: "Veuillez saisir un montant valide.", toastInputReason: "Le motif est requis pour un prêt.",
         toastAdded: "Commande d'ajout envoyée.", toastAddFailed: "Échec de l'ajout : ", toastDeleted: "Commande de suppression envoyée.", toastDeleteFailed: "Échec de la suppression : ",
         confirmDelete: "Voulez-vous vraiment supprimer cet enregistrement ?\n(Le solde total sera recalculé automatiquement.)"
@@ -648,11 +636,11 @@ const i18n = {
     de: {
         title: "ZJH Schulden-Tracker", totalLabel: "ZJH schuldet mir insgesamt:", loading: "Wird geladen...", error: "Fehler",
         btnHistory: "Verlauf ansehen", btnAdmin: "Admin-Modus", historyTitle: "Transaktionsverlauf", thDate: "Datum", thAmount: "Betrag", thReason: "Zweck", thAction: "Aktion",
-        adminLogin: "Admin-Login", enterPass: "Passwort eingeben", login: "Einloggen", addData: "Eintrag hinzufügen",
+        adminLogin: "Admin-Login", enterEmail: "E-Mail eingeben", sendOtp: "Code senden", enterOtp: "6-stelliger Code", login: "Einloggen", addData: "Eintrag hinzufügen",
         lblType: "Art", debt: "Verliehen", repay: "Zurückgezahlt", required: "*Erforderlich", amountYen: "Betrag (Yen)", placeholderAmount: "z.B. 5000",
         reasonRequired: "*Erforderlich beim Verleihen", placeholderReason: "z.B. Mittagessen, Ticket", save: "Speichern",
         cancel: "Abbrechen", confirm: "Bestätigen", yen: " ¥", delete: "Löschen",
-        toastLogin: "Erfolgreich einggeloggt", toastWrongPass: "Falsches Passwort", toastNoAuth: "Zugriff verweigert",
+        toastLogin: "Erfolgreich einggeloggt", toastWrongOtp: "Falscher oder abgelaufener Code", toastNoAuth: "Zugriff verweigert",
         toastInputDate: "Bitte ein Datum auswählen.", toastInputAmount: "Bitte einen gültigen Betrag eingeben.", toastInputReason: "Bitte einen Zweck angeben.",
         toastAdded: "Einfügebefehl gesendet.", toastAddFailed: "Fehler beim Speichern: ", toastDeleted: "Löschbefehl gesendet.", toastDeleteFailed: "Fehler beim Löschen: ",
         confirmDelete: "Möchten Sie diesen Eintrag wirklich löschen?\n(Der Gesamtsaldo wird automatisch neu berechnet.)"
@@ -683,7 +671,11 @@ function updateLanguageDOM() {
     document.getElementById("thAction").innerText = t.thAction;
     
     document.getElementById("adminLoginTitle").innerText = t.adminLogin;
-    document.getElementById("adminPassword").placeholder = t.enterPass;
+    
+    // OTP用のプレースホルダーと言語更新
+    document.getElementById("adminEmail").placeholder = t.enterEmail;
+    document.getElementById("btnSendOtp").innerText = t.sendOtp;
+    document.getElementById("adminOtp").placeholder = t.enterOtp;
     document.getElementById("btnLogin").innerText = t.login;
     
     document.getElementById("adminControlsTitle").innerText = t.addData;
@@ -737,17 +729,30 @@ function resetPageOnLoad() {
     if (adminPanel) adminPanel.style.display = "none";
     
     isAdminLoggedIn = false;
-    globalAdminPassword = "";
     document.body.classList.remove("is-admin");
     document.getElementById("adminControls").style.display = "none";
-    document.getElementById("adminPassword").value = ""; 
+    
+    // UIを初期状態に戻す
+    document.getElementById("loginStep1").style.display = "block";
+    document.getElementById("loginStep2").style.display = "none";
+    document.getElementById("adminEmail").value = ""; 
+    document.getElementById("adminOtp").value = ""; 
+
     updateLanguageDOM(); 
 }
 
 window.addEventListener('beforeunload', resetPageOnLoad);
-window.addEventListener('load', () => {
+window.addEventListener('load', async () => {
     resetPageOnLoad();
     setTimeout(resetPageOnLoad, 0);
+    
+    // ページロード時に既にセッションがあるかチェック
+    if (supabaseClient) {
+        const { data } = await supabaseClient.auth.getSession();
+        if (data.session) {
+            isAdminLoggedIn = true;
+        }
+    }
 });
 
 function updateReasonLabel() {
@@ -769,7 +774,6 @@ document.getElementById('typeInput').addEventListener('change', updateReasonLabe
 const CONFIG_URL = "https://cjbwqutwvymejgsdnjzf.supabase.co";
 const CONFIG_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqYndxdXR3dnltZWpnc2RuanpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3OTgyMjIsImV4cCI6MjA5NjM3NDIyMn0.C20QTlycDBvgfMjwAGaPQ1VLhlPj0iGA3C3xYi463bs";
 
-let globalAdminPassword = "";
 let supabaseClient = null;
 let isAdminLoggedIn = false; 
 
@@ -832,46 +836,112 @@ function toggleHistory(){
     if(!isBlock) { loadHistory(); }
 }
 
-function toggleAdmin(){
+async function toggleAdmin(){
     const panel = document.getElementById("adminPanel");
     if(!panel) return;
     const isBlock = window.getComputedStyle(panel).display === "block";
     
     if(isBlock) {
+        // 閉じる時にログアウト処理
         panel.style.display = "none";
         isAdminLoggedIn = false;
-        globalAdminPassword = "";
         document.body.classList.remove("is-admin");
         document.getElementById("adminControls").style.display = "none";
-        document.getElementById("adminPassword").value = ""; 
+        
+        // 入力欄リセット
+        document.getElementById("loginStep1").style.display = "block";
+        document.getElementById("loginStep2").style.display = "none";
+        document.getElementById("adminEmail").value = ""; 
+        document.getElementById("adminOtp").value = ""; 
+        
+        if (supabaseClient) await supabaseClient.auth.signOut();
+        
         loadHistory(); 
     } else {
+        // セッションが残っているか確認し、あれば即座にコントロール表示
+        if (supabaseClient) {
+            const { data } = await supabaseClient.auth.getSession();
+            if (data.session) {
+                isAdminLoggedIn = true;
+                document.body.classList.add("is-admin");
+                document.getElementById("loginStep1").style.display = "none";
+                document.getElementById("loginStep2").style.display = "none";
+                document.getElementById("adminControls").style.display = "block";
+                loadHistory();
+            }
+        }
         panel.style.display = "block";
     }
 }
 
-async function loginAdmin(){
-    const pass = document.getElementById("adminPassword").value;
+// 🔐 STEP1: OTPの送信処理
+async function sendAdminOtp() {
+    const email = document.getElementById("adminEmail").value;
     const t = i18n[currentLang];
-    
-    try {
-        const { data: isCorrect, error } = await supabaseClient
-            .rpc('check_admin_password', { input_password: pass });
 
-        if (error || !isCorrect) {
-            showToast(t.toastWrongPass, "error");
-            globalAdminPassword = "";
+    if (!email) {
+        showToast("メールアドレスを入力してください", "error");
+        return;
+    }
+
+    document.getElementById("btnSendOtp").disabled = true;
+
+    try {
+        const { error } = await supabaseClient.auth.signInWithOtp({
+            email: email,
+            options: { shouldCreateUser: false } // 新規登録をブロック
+        });
+
+        if (error) {
+            console.error("OTP送信エラー:", error.message);
+            showToast("登録されていないアドレスか、送信に失敗しました", "error");
+        } else {
+            showToast("確認コードを送信しました");
+            document.getElementById("loginStep1").style.display = "none";
+            document.getElementById("loginStep2").style.display = "block";
+        }
+    } catch (e) {
+        showToast(t.error, "error");
+    } finally {
+        document.getElementById("btnSendOtp").disabled = false;
+    }
+}
+
+// 🔐 STEP2: OTPの検証処理
+async function verifyAdminOtp() {
+    const email = document.getElementById("adminEmail").value;
+    const otpToken = document.getElementById("adminOtp").value;
+    const t = i18n[currentLang];
+
+    if (!otpToken) {
+        showToast("確認コードを入力してください", "error");
+        return;
+    }
+
+    document.getElementById("btnLogin").disabled = true;
+
+    try {
+        const { data: { session }, error } = await supabaseClient.auth.verifyOtp({
+            email: email,
+            token: otpToken,
+            type: 'email'
+        });
+
+        if (error || !session) {
+            console.error("OTP検証エラー:", error);
+            showToast(t.toastWrongOtp, "error");
         } else {
             isAdminLoggedIn = true;
-            globalAdminPassword = pass;
             document.body.classList.add("is-admin"); 
+            document.getElementById("loginStep2").style.display = "none";
             document.getElementById("adminControls").style.display = "block";
             showToast(t.toastLogin);
             loadHistory(); 
         }
     } catch (e) {
-        console.error(e);
-        showToast(t.toastWrongPass, "error");
+        showToast(t.error, "error");
+    } finally {
+        document.getElementById("btnLogin").disabled = false;
     }
 }
 
@@ -963,10 +1033,10 @@ async function addTransaction(){
     saveBtn.disabled = true;
 
     try {
+        // ※カスタムヘッダー(x-admin-password)は不要になり、認証セッションのJWTが自動送信されます
         const { error: insertError } = await supabaseClient
             .from("history")
-            .insert([{ date, amount: finalAmount, reason }])
-            .setHeader("x-admin-password", globalAdminPassword);
+            .insert([{ date, amount: finalAmount, reason }]);
 
         if(insertError){
             showToast(t.toastAddFailed + insertError.message, "error");
@@ -1006,8 +1076,7 @@ async function deleteTransaction(historyId, buttonElement){
         const { error: deleteError } = await supabaseClient
             .from("history")
             .delete()
-            .eq("id", historyId)
-            .setHeader("x-admin-password", globalAdminPassword);
+            .eq("id", historyId);
 
         if (deleteError) {
             showToast(t.toastDeleteFailed + deleteError.message, "error");
@@ -1048,9 +1117,7 @@ if (supabaseClient) {
         .subscribe();
 }
 
-// 🌟 【新規追加】JavaScript側で拡大・ピンチ・ダブルタップズームを完全に阻止するスクリプト (iOS / Safari 対策)
 document.addEventListener('touchstart', (event) => {
-    // 2本指以上のピンチイン・ピンチアウト操作を禁止
     if (event.touches.length > 1) {
         event.preventDefault();
     }
@@ -1059,7 +1126,6 @@ document.addEventListener('touchstart', (event) => {
 let lastTouchEnd = 0;
 document.addEventListener('touchend', (event) => {
     const now = (new Date()).getTime();
-    // 300ミリ秒以内の連続タップ（ダブルタップ）による自動拡大を禁止
     if (now - lastTouchEnd <= 300) {
         event.preventDefault();
     }
